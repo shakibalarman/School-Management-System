@@ -1,63 +1,113 @@
-import { Link } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../lib/api";
-
-const NAV: Record<string, { to: string; label: string }[]> = {
-  admin: [
-    { to: "/students", label: "Students" },
-    { to: "/teachers", label: "Teachers" },
-    { to: "/attendance", label: "Attendance" },
-    { to: "/exams", label: "Exams" },
-    { to: "/fees", label: "Fees" },
-  ],
-  teacher: [
-    { to: "/students", label: "Students" },
-    { to: "/attendance", label: "Attendance" },
-    { to: "/exams", label: "Exams" },
-  ],
-  student: [
-    { to: "/attendance", label: "My Attendance" },
-    { to: "/exams", label: "My Results" },
-  ],
-  guardian: [
-    { to: "/attendance", label: "Attendance" },
-    { to: "/fees", label: "Fees" },
-  ],
-};
+import { GraduationCap, Users, BookOpen, Library, ClipboardCheck, DollarSign } from "lucide-react";
+import { fetchDashboardStats } from "../services/dashboard";
+import { StatCard } from "../components/dashboard/StatCard";
+import { DonutCard } from "../components/dashboard/DonutCard";
+import { AttendanceChart } from "../components/dashboard/AttendanceChart";
+import { FeeCollectionChart } from "../components/dashboard/FeeCollectionChart";
 
 export function Dashboard() {
-  const { user, logout } = useAuth();
-  const role = user?.role ?? "student";
-  const health = useQuery({
-    queryKey: ["health"],
-    queryFn: async () => (await api.get("/../health")).data,
-    retry: false,
+  const { data: stats, isLoading, error } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: fetchDashboardStats,
   });
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b px-6 py-4 flex justify-between items-center">
-        <h1 className="font-bold">SMS · {role} dashboard</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-slate-600">{user?.email}</span>
-          <button onClick={logout} className="text-sm border rounded px-3 py-1">
-            Logout
-          </button>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-slate-500">Loading dashboard...</p>
         </div>
-      </header>
-      <main className="p-6 grid gap-4 max-w-3xl">
-        <p className="text-sm text-slate-600">
-          API: {(health.data as { status?: string })?.status ?? health.error ? "unreachable" : "checking…"}
-        </p>
-        <nav className="grid gap-2">
-          {(NAV[role] ?? []).map((n) => (
-            <Link key={n.to} to={n.to} className="bg-white border rounded p-4 hover:bg-slate-100">
-              {n.label}
-            </Link>
-          ))}
-        </nav>
-      </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-sm text-red-600">Failed to load dashboard data.</p>
+          <p className="text-xs text-slate-500 mt-1">Please check if the API is running.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
+        <p className="text-sm text-slate-500 mt-1">Welcome back! Here&apos;s your school overview.</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Students"
+          value={stats?.total_students ?? 0}
+          icon={<GraduationCap size={48} />}
+          color="blue"
+        />
+        <StatCard
+          title="Total Teachers"
+          value={stats?.total_teachers ?? 0}
+          icon={<Users size={48} />}
+          color="green"
+        />
+        <StatCard
+          title="Total Classes"
+          value={stats?.total_classes ?? 0}
+          icon={<BookOpen size={48} />}
+          color="orange"
+        />
+        <StatCard
+          title="Total Subjects"
+          value={stats?.total_subjects ?? 0}
+          icon={<Library size={48} />}
+          color="purple"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Today's Attendance"
+          value={`${stats?.today_attendance.percentage ?? 0}%`}
+          icon={<ClipboardCheck size={48} />}
+          color="teal"
+          subtitle={`${stats?.today_attendance.present ?? 0} present of ${stats?.today_attendance.total ?? 0}`}
+        />
+        <DonutCard
+          title="Attendance Rate"
+          percentage={stats?.today_attendance.percentage ?? 0}
+          color="#6366f1"
+          subtitle="Today's attendance"
+        />
+        <DonutCard
+          title="Fee Collection"
+          percentage={
+            stats?.fee_collection.total_due
+              ? Math.round((stats.fee_collection.total_collected / stats.fee_collection.total_due) * 100)
+              : 0
+          }
+          color="#10b981"
+          subtitle={`$${(stats?.fee_collection.total_collected ?? 0).toLocaleString()} collected`}
+        />
+        <StatCard
+          title="Outstanding Fees"
+          value={`$${(stats?.fee_collection.total_outstanding ?? 0).toLocaleString()}`}
+          icon={<DollarSign size={48} />}
+          color="red"
+          subtitle="Pending payments"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AttendanceChart />
+        <FeeCollectionChart
+          collected={stats?.fee_collection.total_collected ?? 0}
+          outstanding={stats?.fee_collection.total_outstanding ?? 0}
+        />
+      </div>
     </div>
   );
 }
