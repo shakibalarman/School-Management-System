@@ -1,0 +1,16 @@
+# Secrets — real credentials live only in local .env files
+backend/.env
+frontend/.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
