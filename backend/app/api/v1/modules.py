@@ -98,6 +98,14 @@ def list_classes(db: Session = Depends(get_db), _: User = Depends(get_current_us
     return out
 
 
+@academic_router.get("/sections")
+def list_sections(class_id: str | None = None, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    stmt = select(Section)
+    if class_id:
+        stmt = stmt.where(Section.class_id == class_id)
+    return [{"id": str(s.id), "name": s.name, "class_id": str(s.class_id), "capacity": s.capacity} for s in db.scalars(stmt)]
+
+
 @academic_router.post("/sections", status_code=201)
 def create_section(data: SectionCreate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
     s = Section(name=data.name, class_id=data.class_id, capacity=data.capacity)
