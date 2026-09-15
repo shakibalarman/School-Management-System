@@ -13,7 +13,7 @@ from app.models.user import User, UserRole
 def main() -> None:
     db = SessionLocal()
     try:
-        email = "admin@school.local"
+        email = "admin@school.com"
         admin = db.scalar(select(User).where(User.email == email))
         if admin is None:
             admin = User(email=email, hashed_password=hash_password("Admin123!"), role=UserRole.ADMIN, is_active=True)

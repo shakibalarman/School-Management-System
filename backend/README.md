@@ -1,24 +1,64 @@
 # SMS Backend (FastAPI)
 
-## Setup (Windows PowerShell)
+## Setup (Git Bash)
 
-```powershell
+```bash
 cd backend
+
+# Create virtual environment
 python -m venv .venv
-.venv\Scripts\Activate.ps1
+source .venv/Scripts/activate
+
+# Install dependencies
 pip install -r requirements.txt
-Copy-Item .env.example .env
+
+# Configure environment
+cp .env.example .env
 # Edit .env -> set DATABASE_URL password + JWT_SECRET_KEY
-# Create database once:
-#   psql -U shakibalarman -d postgres -c "CREATE DATABASE sms_db;"
+
+# Create database (one-time)
+psql -U shakibalarman -d postgres -c "CREATE DATABASE sms_db;"
+
+# Run migrations
 alembic revision --autogenerate -m "init"
 alembic upgrade head
+
+# Seed admin user + academic data
 python seed.py
+
+# Start server
 uvicorn app.main:app --reload --port 8000
 ```
 
-Health: `GET /health`, readiness incl. DB: `GET /ready`.
-API docs: `http://localhost:8000/docs`.
-```
+## Default Admin Credentials
 
-Frontend dev server (`http://localhost:5173`) is allow-listed via `BACKEND_CORS_ORIGINS`.
+| Email            | Password  |
+|------------------|-----------|
+| admin@school.com | Admin123! |
+
+## Endpoints
+
+| Route     | Description                     |
+|-----------|---------------------------------|
+| `/health` | Health check                    |
+| `/ready`  | Health check incl. DB           |
+| `/docs`   | Swagger UI                      |
+| `/api/v1/auth/login`    | POST login (email + password) |
+| `/api/v1/auth/me`       | GET current user (requires Bearer token) |
+| `/api/v1/users`         | POST create user (admin only) |
+
+## RBAC
+
+- **admin** — full access, can create student/teacher accounts
+- **teacher** — attendance, exams, marks
+- **student** — own attendance, results
+- **guardian** — child attendance, fees
+
+## Tech Stack
+
+- FastAPI 0.141
+- SQLAlchemy 2.0
+- Alembic (migrations)
+- psycopg 3 (PostgreSQL driver)
+- Pydantic v2 (validation)
+- PyJWT + bcrypt (auth)

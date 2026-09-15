@@ -45,7 +45,7 @@ export function LoginPage() {
         <button className="w-full bg-blue-600 text-white rounded py-2" disabled={formState.isSubmitting}>
           {formState.isSubmitting ? "Signing in…" : "Sign in"}
         </button>
-        <p className="text-xs text-slate-500">Seeded admin: admin@school.local / Admin123!</p>
+        <p className="text-xs text-slate-500">Seeded admin: admin@school.com / Admin123!</p>
       </form>
     </div>
   );
