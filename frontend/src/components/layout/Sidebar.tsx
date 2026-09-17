@@ -13,6 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   School,
+  Eye,
+  User,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -21,6 +23,8 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   adminOnly?: boolean;
+  teacherOnly?: boolean;
+  studentOnly?: boolean;
 }
 
 interface NavGroup {
@@ -49,7 +53,11 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Attendance",
-    items: [{ to: "/attendance", label: "Attendance", icon: <ClipboardCheck size={20} /> }],
+    items: [
+      { to: "/attendance", label: "Take Attendance", icon: <ClipboardCheck size={20} /> },
+      { to: "/attendance/view", label: "View Attendance", icon: <Eye size={20} />, adminOnly: true },
+      { to: "/attendance/my", label: "My Attendance", icon: <User size={20} />, studentOnly: true },
+    ],
   },
   {
     label: "Examination",
@@ -76,6 +84,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { user, logout } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isStudent = user?.role === "student";
 
   return (
     <aside
@@ -96,9 +105,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
         {NAV_GROUPS.map((group) => {
-          const visibleItems = group.items.filter(
-            (item) => !item.adminOnly || isAdmin,
-          );
+          const visibleItems = group.items.filter((item) => {
+            if (item.adminOnly && !isAdmin) return false;
+            if (item.studentOnly && !isStudent) return false;
+            return true;
+          });
           if (visibleItems.length === 0) return null;
           return (
             <div key={group.label} className="mb-4">

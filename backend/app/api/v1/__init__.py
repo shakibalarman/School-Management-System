@@ -9,9 +9,11 @@ from app.api.v1.modules import (
     exams_router,
     fees_router,
     guardians_router,
+    notices_router,
     reports_router,
     results_router,
 )
+from app.api.v1.student_portal import router as student_portal_router
 from app.api.v1.students import router as students_router
 from app.api.v1.teachers import router as teachers_router
 from app.api.v1.users import router as users_router
@@ -29,3 +31,5 @@ api_router.include_router(exams_router)
 api_router.include_router(results_router)
 api_router.include_router(fees_router)
 api_router.include_router(reports_router)
+api_router.include_router(notices_router)
+api_router.include_router(student_portal_router)

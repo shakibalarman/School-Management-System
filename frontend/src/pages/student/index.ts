@@ -1,0 +1,8 @@
+export { StudentDashboardPage } from "./StudentDashboard";
+export { StudentProfilePage } from "./StudentProfile";
+export { StudentSubjectsPage } from "./StudentSubjects";
+export { StudentSchedulePage } from "./StudentSchedule";
+export { StudentAttendancePage } from "./StudentAttendance";
+export { StudentExamsPage } from "./StudentExams";
+export { StudentFeesPage } from "./StudentFees";
+export { StudentNoticesPage } from "./StudentNotices";

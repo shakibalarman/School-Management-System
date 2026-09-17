@@ -5,6 +5,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { School, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
+import { api } from "../lib/api";
 
 const schema = z.object({
   email: z.string().min(1, "Email is required"),
@@ -24,7 +25,12 @@ export function LoginPage() {
     setError(null);
     try {
       await login(values.email, values.password);
-      nav("/", { replace: true });
+      const { data: me } = await api.get("/auth/me");
+      if (me.role === "student") {
+        nav("/student", { replace: true });
+      } else {
+        nav("/", { replace: true });
+      }
     } catch {
       setError("Invalid credentials");
     }

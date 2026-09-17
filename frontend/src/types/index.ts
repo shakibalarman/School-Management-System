@@ -32,6 +32,7 @@ export interface DashboardStats {
 
 export interface Student {
   id: string;
+  user_id: string | null;
   student_code: string;
   first_name: string;
   last_name: string;
@@ -40,6 +41,9 @@ export interface Student {
   address: string | null;
   date_of_birth: string | null;
   gender: string | null;
+  blood_group: string | null;
+  nationality: string | null;
+  religion: string | null;
   admission_date: string | null;
   class_id: string | null;
   section_id: string | null;
@@ -57,6 +61,11 @@ export interface Teacher {
   last_name: string;
   email: string;
   phone: string | null;
+  date_of_birth: string | null;
+  gender: string | null;
+  blood_group: string | null;
+  nationality: string | null;
+  religion: string | null;
   department: string | null;
   designation: string | null;
   joining_date: string | null;
@@ -99,6 +108,9 @@ export interface AttendanceRecord {
   status: "present" | "absent" | "late" | "excused";
   marked_by: string | null;
   created_at: string;
+  student?: { first_name: string; last_name: string; student_code: string } | null;
+  class?: { name: string } | null;
+  section?: { name: string } | null;
 }
 
 export interface FeeInvoice {
@@ -118,4 +130,15 @@ export interface Guardian {
   last_name: string;
   email: string | null;
   phone: string | null;
+}
+
+export interface StudentAttendanceSummary {
+  student_id: string;
+  total: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  percentage: number;
+  records: { id: string; date: string; status: string }[];
 }

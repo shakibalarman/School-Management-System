@@ -5,7 +5,24 @@ import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { LoginPage } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { AdminLayout } from "./components/layout/AdminLayout";
-import { Placeholder, StudentsPage } from "./pages/Modules";
+import { StudentLayout } from "./components/layout/StudentLayout";
+import { StudentsPage } from "./pages/Students";
+import { TeachersPage } from "./pages/Teachers";
+import { SubjectsPage } from "./pages/Subjects";
+import { ClassesPage } from "./pages/Classes";
+import { TakeAttendancePage } from "./pages/TakeAttendance";
+import { AttendanceViewPage } from "./pages/AttendanceView";
+import { MyAttendancePage } from "./pages/MyAttendance";
+import {
+  StudentDashboardPage,
+  StudentProfilePage,
+  StudentSubjectsPage,
+  StudentSchedulePage,
+  StudentAttendancePage,
+  StudentExamsPage,
+  StudentFeesPage,
+  StudentNoticesPage,
+} from "./pages/student";
 
 const qc = new QueryClient();
 
@@ -16,25 +33,45 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+
+            {/* Admin / Teacher routes */}
             <Route
               path="/"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute roles={["admin", "teacher"]}>
                   <AdminLayout />
                 </ProtectedRoute>
               }
             >
               <Route index element={<Dashboard />} />
               <Route path="students" element={<StudentsPage />} />
-              <Route path="teachers" element={<ProtectedRoute roles={["admin"]}><Placeholder title="Teachers" /></ProtectedRoute>} />
-              <Route path="classes" element={<Placeholder title="Classes" />} />
-              <Route path="subjects" element={<Placeholder title="Subjects" />} />
-              <Route path="attendance" element={<Placeholder title="Attendance" />} />
-              <Route path="exams" element={<Placeholder title="Exams" />} />
-              <Route path="results" element={<Placeholder title="Results" />} />
-              <Route path="fees" element={<Placeholder title="Fees" />} />
-              <Route path="settings" element={<Placeholder title="Settings" />} />
+              <Route path="teachers" element={<ProtectedRoute roles={["admin"]}><TeachersPage /></ProtectedRoute>} />
+              <Route path="classes" element={<ClassesPage />} />
+              <Route path="subjects" element={<SubjectsPage />} />
+              <Route path="attendance" element={<TakeAttendancePage />} />
+              <Route path="attendance/view" element={<ProtectedRoute roles={["admin"]}><AttendanceViewPage /></ProtectedRoute>} />
+              <Route path="attendance/my" element={<MyAttendancePage />} />
             </Route>
+
+            {/* Student portal routes */}
+            <Route
+              path="/student"
+              element={
+                <ProtectedRoute roles={["student"]}>
+                  <StudentLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<StudentDashboardPage />} />
+              <Route path="profile" element={<StudentProfilePage />} />
+              <Route path="subjects" element={<StudentSubjectsPage />} />
+              <Route path="schedule" element={<StudentSchedulePage />} />
+              <Route path="attendance" element={<StudentAttendancePage />} />
+              <Route path="exams" element={<StudentExamsPage />} />
+              <Route path="fees" element={<StudentFeesPage />} />
+              <Route path="notices" element={<StudentNoticesPage />} />
+            </Route>
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

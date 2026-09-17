@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_admin
+from app.core.security import hash_password
 from app.models.people import Guardian, Student
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas import StudentCreate, StudentOut, StudentUpdate
 
 router = APIRouter(prefix="/students", tags=["students"])
@@ -31,11 +32,26 @@ def create_student(data: StudentCreate, db: Session = Depends(get_db), _: User =
         address=data.address,
         date_of_birth=data.date_of_birth,
         gender=data.gender,
+        blood_group=data.blood_group,
+        nationality=data.nationality,
+        religion=data.religion,
         admission_date=data.admission_date,
         class_id=data.class_id,
         section_id=data.section_id,
         roll_number=data.roll_number,
     )
+    if data.create_login:
+        if not data.email:
+            raise HTTPException(status_code=400, detail="Email is required when create_login=True")
+        if not data.password:
+            raise HTTPException(status_code=400, detail="Password required when create_login=True")
+        login_email = data.email.lower().strip()
+        if db.scalar(select(User).where(User.email == login_email)):
+            raise HTTPException(status_code=400, detail="A user with this email already exists")
+        login = User(email=login_email, hashed_password=hash_password(data.password), role=UserRole.STUDENT)
+        db.add(login)
+        db.flush()
+        student.user_id = login.id
     if data.guardian_ids:
         guardians = list(db.scalars(select(Guardian).where(Guardian.id.in_(data.guardian_ids))))
         student.guardians = guardians

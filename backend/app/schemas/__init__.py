@@ -53,11 +53,16 @@ class StudentCreate(BaseModel):
     address: str | None = None
     date_of_birth: date | None = None
     gender: Gender | None = None
+    blood_group: str | None = None
+    nationality: str | None = None
+    religion: str | None = None
     admission_date: date | None = None
     class_id: uuid.UUID | None = None
     section_id: uuid.UUID | None = None
     roll_number: int | None = None
     guardian_ids: list[uuid.UUID] = []
+    create_login: bool = False
+    password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
 class StudentUpdate(BaseModel):
@@ -65,6 +70,11 @@ class StudentUpdate(BaseModel):
     last_name: str | None = None
     phone: str | None = None
     address: str | None = None
+    date_of_birth: date | None = None
+    gender: Gender | None = None
+    blood_group: str | None = None
+    nationality: str | None = None
+    religion: str | None = None
     class_id: uuid.UUID | None = None
     section_id: uuid.UUID | None = None
     roll_number: int | None = None
@@ -74,14 +84,22 @@ class StudentUpdate(BaseModel):
 
 class StudentOut(BaseModel):
     id: uuid.UUID
+    user_id: uuid.UUID | None = None
     student_code: str
     first_name: str
     last_name: str
     email: EmailStr | None = None
+    phone: str | None = None
+    date_of_birth: date | None = None
+    gender: Gender | None = None
+    blood_group: str | None = None
+    nationality: str | None = None
+    religion: str | None = None
     class_id: uuid.UUID | None = None
     section_id: uuid.UUID | None = None
     roll_number: int | None = None
     status: PersonStatus
+    admission_date: date | None = None
 
     model_config = {"from_attributes": True}
 
@@ -92,6 +110,11 @@ class TeacherCreate(BaseModel):
     last_name: str
     email: EmailStr
     phone: str | None = None
+    date_of_birth: date | None = None
+    gender: Gender | None = None
+    blood_group: str | None = None
+    nationality: str | None = None
+    religion: str | None = None
     department: str | None = None
     designation: str | None = None
     joining_date: date | None = None
@@ -105,8 +128,15 @@ class TeacherOut(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr
+    phone: str | None = None
+    date_of_birth: date | None = None
+    gender: Gender | None = None
+    blood_group: str | None = None
+    nationality: str | None = None
+    religion: str | None = None
     department: str | None = None
     designation: str | None = None
+    joining_date: date | None = None
     status: PersonStatus
 
     model_config = {"from_attributes": True}

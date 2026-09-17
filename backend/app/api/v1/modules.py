@@ -1,4 +1,4 @@
-"""Guardians, academic structure, attendance, exams/marks, fees, reports."""
+"""Guardians, academic structure, attendance, exams/marks, fees, reports, notices."""
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -13,6 +13,7 @@ from app.models.attendance import Attendance
 from app.models.enums import AttendanceStatus
 from app.models.exam import Exam, Mark
 from app.models.fee import FeeCategory, FeePayment, StudentFee
+from app.models.notice import Notice
 from app.models.people import Guardian, Student
 from app.models.user import User
 from app.schemas import (
@@ -38,6 +39,7 @@ exams_router = APIRouter(prefix="/exams", tags=["exams"])
 results_router = APIRouter(prefix="/results", tags=["results"])
 fees_router = APIRouter(prefix="/fees", tags=["fees"])
 reports_router = APIRouter(prefix="/reports", tags=["reports"])
+notices_router = APIRouter(prefix="/notices", tags=["notices"])
 
 
 # ---- Guardians ----
@@ -137,6 +139,16 @@ def list_subjects(db: Session = Depends(get_db), _: User = Depends(get_current_u
     return [{"id": str(s.id), "name": s.name, "code": s.code} for s in db.scalars(select(Subject))]
 
 
+@academic_router.delete("/subjects/{subject_id}", status_code=204)
+def delete_subject(subject_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    subj = db.get(Subject, subject_id)
+    if subj is None:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    db.delete(subj)
+    db.commit()
+    return None
+
+
 @academic_router.post("/classes/{class_id}/subjects/{subject_id}", status_code=201)
 def link_subject(class_id: str, subject_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
     db.add(ClassSubject(class_id=class_id, subject_id=subject_id))
@@ -171,6 +183,32 @@ def take_attendance(
     return {"ok": True, "count": len(data.records)}
 
 
+@attendance_router.patch("/{attendance_id}")
+def update_attendance_record(
+    attendance_id: str,
+    data: dict,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    record = db.get(Attendance, attendance_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Attendance record not found")
+    if "status" in data:
+        record.status = data["status"]
+    db.commit()
+    db.refresh(record)
+    return {
+        "id": str(record.id),
+        "student_id": str(record.student_id),
+        "class_id": str(record.class_id),
+        "section_id": str(record.section_id) if record.section_id else None,
+        "date": record.date.isoformat(),
+        "status": record.status.value,
+        "marked_by": str(record.marked_by) if record.marked_by else None,
+        "created_at": record.created_at.isoformat() if record.created_at else None,
+    }
+
+
 @attendance_router.get("/rate")
 def attendance_rate(
     student_id: str = Query(...), db: Session = Depends(get_db), _: User = Depends(get_current_user)
@@ -183,6 +221,104 @@ def attendance_rate(
     ) or 0
     rate = round((present / total * 100) if total else 0.0, 2)
     return {"student_id": student_id, "present": present, "total": total, "rate": rate}
+
+
+@attendance_router.get("")
+def list_attendance(
+    class_id: str | None = None,
+    section_id: str | None = None,
+    date: str | None = None,
+    student_id: str | None = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    stmt = (
+        select(Attendance, Student, SchoolClass, Section)
+        .join(Student, Attendance.student_id == Student.id, isouter=True)
+        .join(SchoolClass, Attendance.class_id == SchoolClass.id, isouter=True)
+        .join(Section, Attendance.section_id == Section.id, isouter=True)
+        .order_by(Attendance.date.desc(), Attendance.created_at.desc())
+    )
+    if class_id:
+        stmt = stmt.where(Attendance.class_id == class_id)
+    if section_id:
+        stmt = stmt.where(Attendance.section_id == section_id)
+    if date:
+        stmt = stmt.where(Attendance.date == date)
+    if student_id:
+        stmt = stmt.where(Attendance.student_id == student_id)
+    rows = db.execute(stmt.offset(skip).limit(limit)).all()
+    return [
+        {
+            "id": str(r[0].id),
+            "student_id": str(r[0].student_id),
+            "class_id": str(r[0].class_id),
+            "section_id": str(r[0].section_id) if r[0].section_id else None,
+            "date": r[0].date.isoformat(),
+            "status": r[0].status.value,
+            "marked_by": str(r[0].marked_by) if r[0].marked_by else None,
+            "created_at": r[0].created_at.isoformat() if r[0].created_at else None,
+            "student": {
+                "first_name": r[1].first_name,
+                "last_name": r[1].last_name,
+                "student_code": r[1].student_code,
+            } if r[1] else None,
+            "class": {"name": r[2].name} if r[2] else None,
+            "section": {"name": r[3].name} if r[3] else None,
+        }
+        for r in rows
+    ]
+
+
+@attendance_router.get("/student/{student_id}")
+def student_attendance(
+    student_id: str,
+    month: int | None = None,
+    year: int | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    stmt = select(Attendance).where(Attendance.student_id == student_id).order_by(Attendance.date.desc())
+    if month and year:
+        from sqlalchemy import extract
+        stmt = stmt.where(extract("month", Attendance.date) == month, extract("year", Attendance.date) == year)
+    records = db.scalars(stmt.limit(500))
+
+    total = 0
+    present = 0
+    absent = 0
+    late = 0
+    excused = 0
+    record_list = []
+    for r in records:
+        total += 1
+        if r.status == AttendanceStatus.PRESENT:
+            present += 1
+        elif r.status == AttendanceStatus.ABSENT:
+            absent += 1
+        elif r.status == AttendanceStatus.LATE:
+            late += 1
+        elif r.status == AttendanceStatus.EXCUSED:
+            excused += 1
+        record_list.append({
+            "id": str(r.id),
+            "date": r.date.isoformat(),
+            "status": r.status.value,
+        })
+
+    percentage = round((present / total * 100) if total else 0.0, 1)
+    return {
+        "student_id": student_id,
+        "total": total,
+        "present": present,
+        "absent": absent,
+        "late": late,
+        "excused": excused,
+        "percentage": percentage,
+        "records": record_list,
+    }
 
 
 # ---- Exams & marks ----
@@ -320,3 +456,88 @@ def report_card(student_id: str, exam_id: str, db: Session = Depends(get_db), _:
         "rows": rows,
         **summary,
     }
+
+
+# ---- Notices ----
+@notices_router.post("", status_code=201)
+def create_notice(
+    data: dict,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    notice = Notice(
+        title=data["title"],
+        content=data["content"],
+        target_role=data.get("target_role", "all"),
+        class_id=data.get("class_id"),
+        published=data.get("published", True),
+        created_by=user.id,
+    )
+    db.add(notice)
+    db.commit()
+    db.refresh(notice)
+    return {
+        "id": str(notice.id),
+        "title": notice.title,
+        "content": notice.content,
+        "target_role": notice.target_role,
+        "class_id": str(notice.class_id) if notice.class_id else None,
+        "published": notice.published,
+        "created_at": notice.created_at.isoformat() if notice.created_at else None,
+    }
+
+
+@notices_router.get("")
+def list_notices(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    notices = db.scalars(select(Notice).order_by(Notice.created_at.desc()))
+    return [
+        {
+            "id": str(n.id),
+            "title": n.title,
+            "content": n.content,
+            "target_role": n.target_role,
+            "class_id": str(n.class_id) if n.class_id else None,
+            "published": n.published,
+            "created_at": n.created_at.isoformat() if n.created_at else None,
+        }
+        for n in notices
+    ]
+
+
+@notices_router.patch("/{notice_id}")
+def update_notice(
+    notice_id: str,
+    data: dict,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    notice = db.get(Notice, notice_id)
+    if notice is None:
+        raise HTTPException(status_code=404, detail="Notice not found")
+    for key in ("title", "content", "target_role", "class_id", "published"):
+        if key in data:
+            setattr(notice, key, data[key])
+    db.commit()
+    db.refresh(notice)
+    return {
+        "id": str(notice.id),
+        "title": notice.title,
+        "content": notice.content,
+        "target_role": notice.target_role,
+        "class_id": str(notice.class_id) if notice.class_id else None,
+        "published": notice.published,
+        "created_at": notice.created_at.isoformat() if notice.created_at else None,
+    }
+
+
+@notices_router.delete("/{notice_id}", status_code=204)
+def delete_notice(
+    notice_id: str,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    notice = db.get(Notice, notice_id)
+    if notice is None:
+        raise HTTPException(status_code=404, detail="Notice not found")
+    db.delete(notice)
+    db.commit()
