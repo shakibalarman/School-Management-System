@@ -10,6 +10,8 @@ import { StudentsPage } from "./pages/Students";
 import { TeachersPage } from "./pages/Teachers";
 import { SubjectsPage } from "./pages/Subjects";
 import { ClassesPage } from "./pages/Classes";
+import { SchedulePage } from "./pages/Schedule";
+import { FeesPage } from "./pages/Fees";
 import { TakeAttendancePage } from "./pages/TakeAttendance";
 import { AttendanceViewPage } from "./pages/AttendanceView";
 import { MyAttendancePage } from "./pages/MyAttendance";
@@ -48,6 +50,8 @@ export default function App() {
               <Route path="teachers" element={<ProtectedRoute roles={["admin"]}><TeachersPage /></ProtectedRoute>} />
               <Route path="classes" element={<ClassesPage />} />
               <Route path="subjects" element={<SubjectsPage />} />
+              <Route path="schedule" element={<ProtectedRoute roles={["admin"]}><SchedulePage /></ProtectedRoute>} />
+              <Route path="fees" element={<ProtectedRoute roles={["admin"]}><FeesPage /></ProtectedRoute>} />
               <Route path="attendance" element={<TakeAttendancePage />} />
               <Route path="attendance/view" element={<ProtectedRoute roles={["admin"]}><AttendanceViewPage /></ProtectedRoute>} />
               <Route path="attendance/my" element={<MyAttendancePage />} />

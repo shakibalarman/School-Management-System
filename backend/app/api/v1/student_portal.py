@@ -8,13 +8,13 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
 from app.core.deps import get_current_user
-from app.models.academic import ClassSubject, SchoolClass, Section, Subject
+from app.models.academic import ClassSubject, SchoolClass, Section, Subject, TeacherSchedule
 from app.models.attendance import Attendance
-from app.models.enums import AttendanceStatus, FeeStatus
+from app.models.enums import AttendanceStatus, DayOfWeek, FeeStatus
 from app.models.exam import Exam, Mark
 from app.models.fee import FeeCategory, FeePayment, StudentFee
 from app.models.notice import Notice
-from app.models.people import Student
+from app.models.people import Student, Teacher
 from app.models.user import User
 
 router = APIRouter(prefix="/student", tags=["student-portal"])
@@ -227,14 +227,43 @@ def get_my_notices(user: User = Depends(get_current_user), db: Session = Depends
 
 @router.get("/schedule")
 def get_my_schedule(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Return the class timetable — for now returns subjects assigned to the student's class."""
+    """Return the class timetable grouped by day of week."""
     student = _get_student_profile(user, db)
     if not student.class_id:
         return []
-    subjects = db.scalars(
-        select(Subject)
-        .join(ClassSubject, ClassSubject.subject_id == Subject.id)
-        .where(ClassSubject.class_id == student.class_id)
-        .order_by(Subject.name)
-    ).all()
-    return [{"id": str(s.id), "name": s.name, "code": s.code} for s in subjects]
+
+    stmt = (
+        select(TeacherSchedule)
+        .where(TeacherSchedule.class_id == student.class_id)
+        .options(
+            joinedload(TeacherSchedule.subject),
+            joinedload(TeacherSchedule.teacher),
+            joinedload(TeacherSchedule.section),
+        )
+        .order_by(TeacherSchedule.day_of_week, TeacherSchedule.period_number)
+    )
+    if student.section_id:
+        stmt = stmt.where(
+            (TeacherSchedule.section_id == student.section_id) | (TeacherSchedule.section_id.is_(None))
+        )
+    else:
+        stmt = stmt.where(TeacherSchedule.section_id.is_(None))
+
+    entries = list(db.scalars(stmt).unique().all())
+
+    routine: dict[str, list] = {}
+    for entry in entries:
+        day = entry.day_of_week.value
+        if day not in routine:
+            routine[day] = []
+        routine[day].append({
+            "id": str(entry.id),
+            "period": entry.period_number,
+            "start_time": entry.start_time.strftime("%H:%M"),
+            "end_time": entry.end_time.strftime("%H:%M"),
+            "subject": {"id": str(entry.subject.id), "name": entry.subject.name, "code": entry.subject.code},
+            "teacher": {"id": str(entry.teacher.id), "name": f"{entry.teacher.first_name} {entry.teacher.last_name}"},
+        })
+
+    day_order = ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"]
+    return [{"day": d, "periods": routine.get(d, [])} for d in day_order if d in routine]

@@ -1,12 +1,13 @@
 """Academic structure: Year -> Class -> Section, Subjects + links."""
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, time
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.models.enums import DayOfWeek
 
 
 class AcademicYear(Base):
@@ -102,6 +103,10 @@ class TeacherClassAssignment(Base):
 
     __table_args__ = (UniqueConstraint("teacher_id", "class_id", "section_id", name="uq_teacher_class_section"),)
 
+    teacher: Mapped["Teacher"] = relationship(back_populates="class_assignments")
+    school_class: Mapped["SchoolClass"] = relationship()
+    section: Mapped["Section | None"] = relationship()
+
 
 class TeacherSubjectAssignment(Base):
     """Teacher -> subject assignment."""
@@ -116,3 +121,42 @@ class TeacherSubjectAssignment(Base):
     )
 
     __table_args__ = (UniqueConstraint("teacher_id", "subject_id", name="uq_teacher_subject"),)
+
+    teacher: Mapped["Teacher"] = relationship(back_populates="subject_assignments")
+    subject: Mapped["Subject"] = relationship()
+
+
+class TeacherSchedule(Base):
+    """Weekly timetable: which teacher teaches which class/subject at which hour."""
+    __tablename__ = "teacher_schedules"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    teacher_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("teachers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    class_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("classes.id", ondelete="CASCADE"), nullable=False
+    )
+    section_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sections.id", ondelete="SET NULL"), nullable=True
+    )
+    subject_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False
+    )
+    day_of_week: Mapped[DayOfWeek] = mapped_column(
+        Enum(DayOfWeek, name="day_of_week", values_callable=lambda x: [e.value for e in x]),
+        nullable=False, index=True
+    )
+    period_number: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-based period index
+    start_time: Mapped[time] = mapped_column(nullable=False)  # e.g. 08:00
+    end_time: Mapped[time] = mapped_column(nullable=False)  # e.g. 08:45
+
+    teacher: Mapped["Teacher"] = relationship()
+    school_class: Mapped["SchoolClass"] = relationship()
+    section: Mapped["Section | None"] = relationship()
+    subject: Mapped["Subject"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("teacher_id", "day_of_week", "period_number", name="uq_teacher_day_period"),
+        UniqueConstraint("class_id", "section_id", "day_of_week", "period_number", name="uq_class_section_day_period"),
+    )

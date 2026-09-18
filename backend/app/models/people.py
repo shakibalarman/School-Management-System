@@ -88,6 +88,9 @@ class Teacher(Base):
     )
 
     user: Mapped["User | None"] = relationship(back_populates="teacher_profile")
+    subject_assignments: Mapped[list["TeacherSubjectAssignment"]] = relationship(back_populates="teacher")
+    class_assignments: Mapped[list["TeacherClassAssignment"]] = relationship(back_populates="teacher")
+    schedules: Mapped[list["TeacherSchedule"]] = relationship(back_populates="teacher")
 
 
 class Guardian(Base):

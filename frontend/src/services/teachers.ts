@@ -14,6 +14,26 @@ export async function getTeacher(id: string): Promise<Teacher> {
   return data;
 }
 
+export async function getTeacherClasses(teacherId: string): Promise<{
+  id: string;
+  class_id: string;
+  section_id: string | null;
+  school_class: { id: string; name: string };
+  section: { id: string; name: string } | null;
+}[]> {
+  const { data } = await api.get(`/teachers/${teacherId}/classes`);
+  return data;
+}
+
+export async function getTeacherSubjects(teacherId: string): Promise<{
+  id: string;
+  subject_id: string;
+  subject: { id: string; name: string; code: string };
+}[]> {
+  const { data } = await api.get(`/teachers/${teacherId}/subjects`);
+  return data;
+}
+
 export async function createTeacher(teacher: {
   first_name: string;
   last_name: string;

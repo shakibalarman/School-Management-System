@@ -6,6 +6,7 @@ from app.models.academic import (  # noqa: F401
     Section,
     Subject,
     TeacherClassAssignment,
+    TeacherSchedule,
     TeacherSubjectAssignment,
 )
 from app.models.attendance import Attendance  # noqa: F401

@@ -20,7 +20,9 @@ from app.schemas import (
     AcademicYearCreate,
     AttendanceTakeIn,
     ExamCreate,
+    FeeBulkAssignIn,
     FeeCategoryCreate,
+    FeeCategoryOut,
     FeePaymentCreate,
     GuardianCreate,
     GuardianOut,
@@ -381,11 +383,77 @@ def student_result(student_id: str, exam_id: str, db: Session = Depends(get_db),
 # ---- Fees ----
 @fees_router.post("/categories", status_code=201)
 def create_category(data: FeeCategoryCreate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    c = FeeCategory(name=data.name, amount=data.amount, academic_year_id=data.academic_year_id, description=data.description)
+    c = FeeCategory(
+        name=data.name, amount=data.amount, class_id=data.class_id,
+        academic_year_id=data.academic_year_id, description=data.description,
+    )
     db.add(c)
     db.commit()
     db.refresh(c)
     return {"id": str(c.id)}
+
+
+@fees_router.get("/categories", response_model=list[FeeCategoryOut])
+def list_categories(
+    class_id: str | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    from app.models.academic import SchoolClass
+
+    stmt = select(FeeCategory)
+    if class_id:
+        stmt = stmt.where(FeeCategory.class_id == class_id)
+    rows = db.scalars(stmt).all()
+    out = []
+    for c in rows:
+        cls = db.get(SchoolClass, c.class_id) if c.class_id else None
+        out.append(FeeCategoryOut(
+            id=c.id, name=c.name, amount=float(c.amount),
+            class_id=c.class_id, academic_year_id=c.academic_year_id,
+            description=c.description, class_name=cls.name if cls else None,
+        ))
+    return out
+
+
+@fees_router.delete("/categories/{category_id}", status_code=204)
+def delete_category(category_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    cat = db.get(FeeCategory, category_id)
+    if cat is None:
+        raise HTTPException(status_code=404, detail="Fee category not found")
+    db.delete(cat)
+    db.commit()
+
+
+@fees_router.post("/assign", status_code=201)
+def bulk_assign_fees(data: FeeBulkAssignIn, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """Assign a fee category to all active students in a class."""
+    from app.models.enums import PersonStatus
+
+    cat = db.get(FeeCategory, data.fee_category_id)
+    if cat is None:
+        raise HTTPException(status_code=404, detail="Fee category not found")
+    students = list(db.scalars(
+        select(Student).where(Student.class_id == data.class_id, Student.status == PersonStatus.ACTIVE)
+    ))
+    if not students:
+        raise HTTPException(status_code=400, detail="No active students found in this class")
+
+    count = 0
+    for s in students:
+        exists = db.scalar(
+            select(StudentFee).where(
+                StudentFee.student_id == s.id, StudentFee.fee_category_id == data.fee_category_id
+            )
+        )
+        if not exists:
+            db.add(StudentFee(
+                student_id=s.id, fee_category_id=data.fee_category_id,
+                total_amount=float(cat.amount), paid_amount=0, due_date=data.due_date,
+            ))
+            count += 1
+    db.commit()
+    return {"ok": True, "assigned": count, "total_students": len(students)}
 
 
 @fees_router.post("/invoices", response_model=StudentFeeOut, status_code=201)

@@ -13,8 +13,10 @@ from app.api.v1.modules import (
     reports_router,
     results_router,
 )
+from app.api.v1.schedules import router as schedules_router
 from app.api.v1.student_portal import router as student_portal_router
 from app.api.v1.students import router as students_router
+from app.api.v1.teacher_portal import router as teacher_portal_router
 from app.api.v1.teachers import router as teachers_router
 from app.api.v1.users import router as users_router
 
@@ -24,6 +26,8 @@ api_router.include_router(dashboard_router)
 api_router.include_router(users_router)
 api_router.include_router(students_router)
 api_router.include_router(teachers_router)
+api_router.include_router(teacher_portal_router)
+api_router.include_router(schedules_router)
 api_router.include_router(guardians_router)
 api_router.include_router(academic_router)
 api_router.include_router(attendance_router)

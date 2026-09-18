@@ -1,6 +1,9 @@
 """Fees: categories, per-student invoices, payments."""
+from __future__ import annotations
+
 import uuid
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -9,6 +12,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 from app.models.enums import FeeStatus, FeeType
 
+if TYPE_CHECKING:
+    from app.models.academic import SchoolClass
+
 
 class FeeCategory(Base):
     __tablename__ = "fee_categories"
@@ -16,10 +22,15 @@ class FeeCategory(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[FeeType] = mapped_column(Enum(FeeType, name="fee_type"), nullable=False)
     amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    class_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("classes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     academic_year_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("academic_years.id", ondelete="SET NULL"), nullable=True
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    school_class: Mapped["SchoolClass | None"] = relationship()
 
 
 class StudentFee(Base):

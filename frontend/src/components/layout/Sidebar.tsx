@@ -9,12 +9,12 @@ import {
   Award,
   DollarSign,
   Settings,
-  LogOut,
   ChevronLeft,
   ChevronRight,
   School,
   Eye,
   User,
+  Clock,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -49,6 +49,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/classes", label: "Classes", icon: <BookOpen size={20} /> },
       { to: "/subjects", label: "Subjects", icon: <BookOpen size={20} /> },
+      { to: "/schedule", label: "Class Routine", icon: <Clock size={20} />, adminOnly: true },
     ],
   },
   {
@@ -68,7 +69,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Finance",
-    items: [{ to: "/fees", label: "Fees", icon: <DollarSign size={20} /> }],
+    items: [{ to: "/fees", label: "Fees", icon: <DollarSign size={20} />, adminOnly: true }],
   },
   {
     label: "System",
@@ -82,7 +83,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
 
@@ -140,32 +141,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           );
         })}
       </nav>
-
-      <div className="border-t border-slate-200 p-3 shrink-0">
-        {!collapsed && (
-          <div className="flex items-center gap-3 px-3 mb-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-              {user?.email?.charAt(0).toUpperCase() ?? "A"}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-800 truncate">
-                {user?.email}
-              </p>
-              <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
-            </div>
-          </div>
-        )}
-        <button
-          onClick={logout}
-          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors ${
-            collapsed ? "justify-center" : ""
-          }`}
-          title="Logout"
-        >
-          <LogOut size={20} />
-          {!collapsed && <span>Logout</span>}
-        </button>
-      </div>
 
       <button
         onClick={onToggle}

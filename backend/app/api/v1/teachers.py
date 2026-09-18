@@ -3,7 +3,7 @@ import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_admin
@@ -12,7 +12,12 @@ from app.models.academic import TeacherClassAssignment, TeacherSubjectAssignment
 from app.models.enums import PersonStatus
 from app.models.people import Teacher
 from app.models.user import User, UserRole
-from app.schemas import TeacherCreate, TeacherOut
+from app.schemas import (
+    TeacherClassAssignmentOut,
+    TeacherCreate,
+    TeacherOut,
+    TeacherSubjectAssignmentOut,
+)
 
 router = APIRouter(prefix="/teachers", tags=["teachers"])
 
@@ -87,6 +92,8 @@ def activate(teacher_id: str, db: Session = Depends(get_db), _: User = Depends(r
     return t
 
 
+# ─── Subject assignments ────────────────────────────────────────────
+
 @router.post("/{teacher_id}/subjects/{subject_id}", status_code=201)
 def assign_subject(teacher_id: str, subject_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
     if db.get(Teacher, teacher_id) is None:
@@ -99,6 +106,36 @@ def assign_subject(teacher_id: str, subject_id: str, db: Session = Depends(get_d
         raise HTTPException(status_code=400, detail="Assignment already exists or invalid")
     return {"ok": True}
 
+
+@router.get("/{teacher_id}/subjects", response_model=list[TeacherSubjectAssignmentOut])
+def list_teacher_subjects(teacher_id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    if db.get(Teacher, teacher_id) is None:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    rows = db.scalars(
+        select(TeacherSubjectAssignment)
+        .where(TeacherSubjectAssignment.teacher_id == teacher_id)
+        .options(joinedload(TeacherSubjectAssignment.subject))
+    ).all()
+    return rows
+
+
+@router.delete("/{teacher_id}/subjects/{subject_id}", status_code=204)
+def remove_teacher_subject(teacher_id: str, subject_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    if db.get(Teacher, teacher_id) is None:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    row = db.scalar(
+        select(TeacherSubjectAssignment).where(
+            TeacherSubjectAssignment.teacher_id == teacher_id,
+            TeacherSubjectAssignment.subject_id == subject_id,
+        )
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    db.delete(row)
+    db.commit()
+
+
+# ─── Class assignments ──────────────────────────────────────────────
 
 @router.post("/{teacher_id}/classes/{class_id}", status_code=201)
 def assign_class(
@@ -114,3 +151,40 @@ def assign_class(
         db.rollback()
         raise HTTPException(status_code=400, detail="Assignment already exists or invalid")
     return {"ok": True}
+
+
+@router.get("/{teacher_id}/classes", response_model=list[TeacherClassAssignmentOut])
+def list_teacher_classes(teacher_id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    if db.get(Teacher, teacher_id) is None:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    rows = db.scalars(
+        select(TeacherClassAssignment)
+        .where(TeacherClassAssignment.teacher_id == teacher_id)
+        .options(
+            joinedload(TeacherClassAssignment.school_class),
+            joinedload(TeacherClassAssignment.section),
+        )
+    ).all()
+    return rows
+
+
+@router.delete("/{teacher_id}/classes/{class_id}", status_code=204)
+def remove_teacher_class(
+    teacher_id: str, class_id: str, section_id: str | None = None,
+    db: Session = Depends(get_db), _: User = Depends(require_admin),
+):
+    if db.get(Teacher, teacher_id) is None:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    stmt = select(TeacherClassAssignment).where(
+        TeacherClassAssignment.teacher_id == teacher_id,
+        TeacherClassAssignment.class_id == class_id,
+    )
+    if section_id:
+        stmt = stmt.where(TeacherClassAssignment.section_id == section_id)
+    else:
+        stmt = stmt.where(TeacherClassAssignment.section_id.is_(None))
+    row = db.scalar(stmt)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    db.delete(row)
+    db.commit()

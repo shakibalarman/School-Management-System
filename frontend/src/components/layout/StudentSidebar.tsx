@@ -8,12 +8,10 @@ import {
   Award,
   DollarSign,
   Bell,
-  LogOut,
   ChevronLeft,
   ChevronRight,
   School,
 } from "lucide-react";
-import { useAuth } from "../../auth/AuthContext";
 
 interface NavItem {
   to: string;
@@ -38,8 +36,6 @@ interface StudentSidebarProps {
 }
 
 export function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
-  const { user, logout } = useAuth();
-
   return (
     <aside
       className={`fixed left-0 top-0 h-full bg-white border-r border-slate-200 z-40 flex flex-col transition-all duration-300 ${
@@ -80,30 +76,6 @@ export function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
           </NavLink>
         ))}
       </nav>
-
-      <div className="border-t border-slate-200 p-3 shrink-0">
-        {!collapsed && (
-          <div className="flex items-center gap-3 px-3 mb-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-              {user?.email?.charAt(0).toUpperCase() ?? "S"}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-800 truncate">{user?.email}</p>
-              <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
-            </div>
-          </div>
-        )}
-        <button
-          onClick={logout}
-          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors ${
-            collapsed ? "justify-center" : ""
-          }`}
-          title="Logout"
-        >
-          <LogOut size={20} />
-          {!collapsed && <span>Logout</span>}
-        </button>
-      </div>
 
       <button
         onClick={onToggle}

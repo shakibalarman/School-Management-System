@@ -48,3 +48,13 @@ class FeeStatus(str, enum.Enum):
     PARTIAL = "partial"
     PAID = "paid"
     OVERDUE = "overdue"
+
+
+class DayOfWeek(str, enum.Enum):
+    SATURDAY = "saturday"
+    SUNDAY = "sunday"
+    MONDAY = "monday"
+    TUESDAY = "tuesday"
+    WEDNESDAY = "wednesday"
+    THURSDAY = "thursday"
+    FRIDAY = "friday"

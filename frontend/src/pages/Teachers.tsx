@@ -3,8 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Search, X, Loader2, UserCheck, UserX } from "lucide-react";
-import { listTeachers, createTeacher, deactivateTeacher, activateTeacher } from "../services/teachers";
+import { Plus, Search, X, Loader2, UserCheck, UserX, BookOpen, Users } from "lucide-react";
+import {
+  listTeachers,
+  createTeacher,
+  deactivateTeacher,
+  activateTeacher,
+  getTeacherClasses,
+  getTeacherSubjects,
+} from "../services/teachers";
 import type { Teacher } from "../types";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -37,12 +44,25 @@ export function TeachersPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [skip, setSkip] = useState(0);
   const limit = 20;
 
   const { data: teachers, isLoading } = useQuery({
     queryKey: ["teachers", skip],
     queryFn: () => listTeachers({ skip, limit }),
+  });
+
+  const { data: teacherClasses = [], isLoading: loadingClasses } = useQuery({
+    queryKey: ["teacher-classes", selectedTeacher?.id],
+    queryFn: () => getTeacherClasses(selectedTeacher!.id),
+    enabled: !!selectedTeacher,
+  });
+
+  const { data: teacherSubjects = [], isLoading: loadingSubjects } = useQuery({
+    queryKey: ["teacher-subjects", selectedTeacher?.id],
+    queryFn: () => getTeacherSubjects(selectedTeacher!.id),
+    enabled: !!selectedTeacher,
   });
 
   const createMut = useMutation({
@@ -125,10 +145,13 @@ export function TeachersPage() {
               {filtered?.map((t: Teacher) => (
                 <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setSelectedTeacher(t)}
+                      className="flex items-center gap-3 hover:bg-slate-50 rounded-lg -mx-2 px-2 py-1 transition-colors"
+                    >
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold">{t.first_name.charAt(0)}</div>
-                      <span className="text-sm font-medium text-slate-800">{t.first_name} {t.last_name}</span>
-                    </div>
+                      <span className="text-sm font-medium text-slate-800 hover:text-indigo-600">{t.first_name} {t.last_name}</span>
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600">{t.teacher_code}</td>
                   <td className="px-4 py-3 text-sm text-slate-600">{t.email}</td>
@@ -156,6 +179,74 @@ export function TeachersPage() {
           <button onClick={() => setSkip(skip + limit)} disabled={(filtered?.length ?? 0) < limit} className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50">Next</button>
         </div>
       </div>
+
+      {/* Teacher Detail Modal */}
+      {selectedTeacher && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b">
+              <h3 className="text-lg font-bold text-slate-800">Teacher Details</h3>
+              <button onClick={() => setSelectedTeacher(null)} className="p-1 hover:bg-slate-100 rounded"><X size={20} /></button>
+            </div>
+            <div className="p-5">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xl font-bold">
+                  {selectedTeacher.first_name.charAt(0)}
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-slate-800">{selectedTeacher.first_name} {selectedTeacher.last_name}</h4>
+                  <p className="text-sm text-slate-500">{selectedTeacher.teacher_code} &middot; {selectedTeacher.email}</p>
+                  {selectedTeacher.department && <p className="text-sm text-slate-500">{selectedTeacher.department}{selectedTeacher.designation ? ` - ${selectedTeacher.designation}` : ""}</p>}
+                </div>
+              </div>
+
+              {/* Assigned Classes */}
+              <div className="mb-6">
+                <h5 className="flex items-center gap-2 text-sm font-semibold text-slate-800 mb-3">
+                  <Users size={16} className="text-indigo-500" /> Assigned Classes
+                </h5>
+                {loadingClasses ? (
+                  <Loader2 className="animate-spin text-indigo-500" size={16} />
+                ) : teacherClasses.length === 0 ? (
+                  <p className="text-sm text-slate-400">No classes assigned yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {teacherClasses.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span className="text-sm font-medium text-slate-800">{c.school_class.name}</span>
+                        {c.section && (
+                          <span className="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded-full">{c.section.name}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Assigned Subjects */}
+              <div>
+                <h5 className="flex items-center gap-2 text-sm font-semibold text-slate-800 mb-3">
+                  <BookOpen size={16} className="text-purple-500" /> Assigned Subjects
+                </h5>
+                {loadingSubjects ? (
+                  <Loader2 className="animate-spin text-indigo-500" size={16} />
+                ) : teacherSubjects.length === 0 ? (
+                  <p className="text-sm text-slate-400">No subjects assigned yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {teacherSubjects.map((s) => (
+                      <div key={s.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span className="text-sm font-medium text-slate-800">{s.subject.name}</span>
+                        <span className="px-2 py-0.5 text-xs font-mono bg-purple-100 text-purple-700 rounded">{s.subject.code}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

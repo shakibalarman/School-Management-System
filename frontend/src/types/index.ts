@@ -142,3 +142,31 @@ export interface StudentAttendanceSummary {
   percentage: number;
   records: { id: string; date: string; status: string }[];
 }
+
+export type DayOfWeek = "saturday" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday";
+
+export interface ScheduleEntry {
+  id: string;
+  teacher_id: string;
+  class_id: string;
+  section_id: string | null;
+  subject_id: string;
+  day_of_week: DayOfWeek;
+  period_number: number;
+  start_time: string;
+  end_time: string;
+  school_class: { id: string; name: string };
+  section: { id: string; name: string } | null;
+  subject: { id: string; name: string; code: string };
+  teacher?: { id: string; first_name: string; last_name: string };
+}
+
+export interface FeeCategory {
+  id: string;
+  name: string;
+  amount: number;
+  class_id: string | null;
+  academic_year_id: string | null;
+  description: string | null;
+  class_name: string | null;
+}

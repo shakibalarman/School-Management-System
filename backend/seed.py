@@ -32,8 +32,7 @@ def main() -> None:
         class_names = [
             "Nursery", "Play", "Class 1", "Class 2", "Class 3", "Class 4",
             "Class 5", "Class 6", "Class 7", "Class 8",
-            "Class 9 Arts", "Class 9 Commerce", "Class 9 Science",
-            "Class 10 Arts", "Class 10 Commerce", "Class 10 Science",
+            "Class 9", "Class 10",
         ]
         for cname in class_names:
             cls = db.scalar(select(SchoolClass).where(SchoolClass.name == cname, SchoolClass.academic_year_id == year.id))
@@ -41,10 +40,12 @@ def main() -> None:
                 cls = SchoolClass(name=cname, academic_year_id=year.id)
                 db.add(cls)
                 db.flush()
-            for sec in ["A", "B"]:
-                exists = db.scalar(select(Section).where(Section.class_id == cls.id, Section.name == sec))
-                if exists is None:
-                    db.add(Section(name=sec, class_id=cls.id, capacity=40))
+            # Only Class 9 and 10 get divisions (Science, Arts, Commerce)
+            if cname in ("Class 9", "Class 10"):
+                for sec in ["Science", "Arts", "Commerce"]:
+                    exists = db.scalar(select(Section).where(Section.class_id == cls.id, Section.name == sec))
+                    if exists is None:
+                        db.add(Section(name=sec, class_id=cls.id, capacity=40))
 
         subjects = [
             ("Bangla", "BAN"),

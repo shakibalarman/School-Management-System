@@ -1,10 +1,10 @@
 """Pydantic v2 schemas."""
 import uuid
-from datetime import date
+from datetime import date, time
 
 from pydantic import BaseModel, EmailStr, Field
 
-from app.models.enums import AttendanceStatus, ExamType, FeeStatus, FeeType, Gender, PersonStatus, UserRole
+from app.models.enums import AttendanceStatus, DayOfWeek, ExamType, FeeStatus, FeeType, Gender, PersonStatus, UserRole
 
 
 # ---------- Auth ----------
@@ -226,8 +226,27 @@ class MarksBulkIn(BaseModel):
 class FeeCategoryCreate(BaseModel):
     name: FeeType
     amount: float = Field(gt=0)
+    class_id: uuid.UUID | None = None
     academic_year_id: uuid.UUID | None = None
     description: str | None = None
+
+
+class FeeCategoryOut(BaseModel):
+    id: uuid.UUID
+    name: FeeType
+    amount: float
+    class_id: uuid.UUID | None = None
+    academic_year_id: uuid.UUID | None = None
+    description: str | None = None
+    class_name: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class FeeBulkAssignIn(BaseModel):
+    class_id: uuid.UUID
+    fee_category_id: uuid.UUID
+    due_date: date | None = None
 
 
 class StudentFeeCreate(BaseModel):
@@ -250,5 +269,74 @@ class StudentFeeOut(BaseModel):
     paid_amount: float
     status: FeeStatus
     due_date: date | None = None
+
+    model_config = {"from_attributes": True}
+
+
+# ---------- Teacher Assignments ----------
+class SubjectOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    code: str
+
+    model_config = {"from_attributes": True}
+
+
+class TeacherSubjectAssignmentOut(BaseModel):
+    id: uuid.UUID
+    subject_id: uuid.UUID
+    subject: SubjectOut
+
+    model_config = {"from_attributes": True}
+
+
+class ClassOut(BaseModel):
+    id: uuid.UUID
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
+class SectionOut(BaseModel):
+    id: uuid.UUID
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
+class TeacherClassAssignmentOut(BaseModel):
+    id: uuid.UUID
+    class_id: uuid.UUID
+    section_id: uuid.UUID | None = None
+    school_class: ClassOut
+    section: SectionOut | None = None
+
+    model_config = {"from_attributes": True}
+
+
+# ---------- Teacher Schedule ----------
+class TeacherScheduleCreate(BaseModel):
+    class_id: uuid.UUID
+    section_id: uuid.UUID | None = None
+    subject_id: uuid.UUID
+    day_of_week: DayOfWeek
+    period_number: int = Field(ge=1, le=20)
+    start_time: time
+    end_time: time
+
+
+class TeacherScheduleOut(BaseModel):
+    id: uuid.UUID
+    teacher_id: uuid.UUID
+    class_id: uuid.UUID
+    section_id: uuid.UUID | None = None
+    subject_id: uuid.UUID
+    day_of_week: DayOfWeek
+    period_number: int
+    start_time: time
+    end_time: time
+    school_class: ClassOut
+    section: SectionOut | None = None
+    subject: SubjectOut
 
     model_config = {"from_attributes": True}
