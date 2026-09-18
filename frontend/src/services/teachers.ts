@@ -68,3 +68,13 @@ export async function activateTeacher(id: string): Promise<Teacher> {
 export async function deleteTeacher(id: string): Promise<void> {
   await api.delete(`/teachers/${id}`);
 }
+
+export async function promoteTeacher(id: string): Promise<Teacher> {
+  const { data } = await api.patch(`/teachers/${id}/promote`);
+  return data;
+}
+
+export async function demoteTeacher(id: string): Promise<Teacher> {
+  const { data } = await api.patch(`/teachers/${id}/demote`);
+  return data;
+}

@@ -7,7 +7,7 @@ import { useAuth } from "../auth/AuthContext";
 export function NoticesPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const canManage = user?.role === "admin" || user?.role === "head_teacher";
   const [showModal, setShowModal] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", content: "", target_role: "all" });
@@ -34,7 +34,7 @@ export function NoticesPage() {
           <h1 className="text-2xl font-bold text-slate-800">Notices</h1>
           <p className="text-sm text-slate-500 mt-1">Post announcements for students and staff</p>
         </div>
-        {isAdmin && (
+        {canManage && (
           <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
             <Plus size={16} /> New Notice
           </button>
@@ -67,7 +67,7 @@ export function NoticesPage() {
                     </div>
                   </div>
                 </div>
-                {isAdmin && (
+        {canManage && (
                   <button onClick={() => setDeleteId(n.id)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0 ml-3"><Trash2 size={14} /></button>
                 )}
               </div>

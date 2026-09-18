@@ -17,6 +17,8 @@ import { AttendanceViewPage } from "./pages/AttendanceView";
 import { MyAttendancePage } from "./pages/MyAttendance";
 import { ExamsPage } from "./pages/Exams";
 import { NoticesPage } from "./pages/Notices";
+import { AcademicYearsPage } from "./pages/AcademicYears";
+import { HomeworkPage } from "./pages/Homework";
 import {
   StudentDashboardPage,
   StudentProfilePage,
@@ -26,6 +28,7 @@ import {
   StudentExamsPage,
   StudentFeesPage,
   StudentNoticesPage,
+  StudentHomeworkPage,
 } from "./pages/student";
 
 const qc = new QueryClient();
@@ -52,9 +55,11 @@ export default function App() {
               <Route path="teachers" element={<ProtectedRoute roles={["admin", "head_teacher"]}><TeachersPage /></ProtectedRoute>} />
               <Route path="classes" element={<ProtectedRoute roles={["admin", "head_teacher"]}><ClassesPage /></ProtectedRoute>} />
               <Route path="subjects" element={<ProtectedRoute roles={["admin", "head_teacher"]}><SubjectsPage /></ProtectedRoute>} />
+              <Route path="academic-years" element={<ProtectedRoute roles={["admin"]}><AcademicYearsPage /></ProtectedRoute>} />
               <Route path="schedule" element={<ProtectedRoute roles={["admin", "head_teacher"]}><SchedulePage /></ProtectedRoute>} />
               <Route path="fees" element={<ProtectedRoute roles={["admin"]}><FeesPage /></ProtectedRoute>} />
               <Route path="exams" element={<ProtectedRoute roles={["admin", "head_teacher", "teacher"]}><ExamsPage /></ProtectedRoute>} />
+              <Route path="homework" element={<ProtectedRoute roles={["admin", "head_teacher", "teacher"]}><HomeworkPage /></ProtectedRoute>} />
               <Route path="notices" element={<ProtectedRoute roles={["admin", "head_teacher"]}><NoticesPage /></ProtectedRoute>} />
               <Route path="attendance" element={<ProtectedRoute roles={["admin", "head_teacher", "teacher"]}><TakeAttendancePage /></ProtectedRoute>} />
               <Route path="attendance/view" element={<ProtectedRoute roles={["admin", "head_teacher"]}><AttendanceViewPage /></ProtectedRoute>} />
@@ -77,6 +82,7 @@ export default function App() {
               <Route path="attendance" element={<StudentAttendancePage />} />
               <Route path="exams" element={<StudentExamsPage />} />
               <Route path="fees" element={<StudentFeesPage />} />
+              <Route path="homework" element={<StudentHomeworkPage />} />
               <Route path="notices" element={<StudentNoticesPage />} />
             </Route>
 

@@ -3,13 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Search, X, Loader2, UserCheck, UserX, Trash2, BookOpen, Users } from "lucide-react";
+import { Plus, Search, X, Loader2, UserCheck, UserX, Trash2, BookOpen, Users, ShieldCheck, ShieldOff } from "lucide-react";
 import {
   listTeachers,
   createTeacher,
   deactivateTeacher,
   activateTeacher,
   deleteTeacher,
+  promoteTeacher,
+  demoteTeacher,
   getTeacherClasses,
   getTeacherSubjects,
 } from "../services/teachers";
@@ -88,6 +90,16 @@ export function TeachersPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["teachers"] }); setDeleteConfirmId(null); },
   });
 
+  const promoteMut = useMutation({
+    mutationFn: promoteTeacher,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["teachers"] }),
+  });
+
+  const demoteMut = useMutation({
+    mutationFn: demoteTeacher,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["teachers"] }),
+  });
+
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<TeacherForm>({
     resolver: zodResolver(teacherSchema),
     defaultValues: { create_login: false },
@@ -143,8 +155,7 @@ export function TeachersPage() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Teacher</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Code</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Email</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Department</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Designation</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Role</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Status</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Actions</th>
               </tr>
@@ -163,13 +174,21 @@ export function TeachersPage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600">{t.teacher_code}</td>
                   <td className="px-4 py-3 text-sm text-slate-600">{t.email}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{t.department ?? "-"}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{t.designation ?? "-"}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${t.user_role === "head_teacher" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"}`}>
+                      {t.user_role === "head_teacher" ? "Head Teacher" : "Teacher"}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${t.status === "active" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>{t.status}</span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
+                      {t.user_role === "head_teacher" ? (
+                        <button onClick={() => demoteMut.mutate(t.id)} className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg" title="Demote to Teacher"><ShieldOff size={14} /></button>
+                      ) : t.user_id ? (
+                        <button onClick={() => promoteMut.mutate(t.id)} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Promote to Head Teacher"><ShieldCheck size={14} /></button>
+                      ) : null}
                       {t.status === "active" ? (
                         <button onClick={() => deactivateMut.mutate(t.id)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Deactivate"><UserX size={14} /></button>
                       ) : (

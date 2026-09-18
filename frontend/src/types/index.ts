@@ -56,6 +56,7 @@ export interface Student {
 
 export interface Teacher {
   id: string;
+  user_id: string | null;
   teacher_code: string;
   first_name: string;
   last_name: string;
@@ -70,6 +71,7 @@ export interface Teacher {
   designation: string | null;
   joining_date: string | null;
   status: "active" | "inactive";
+  user_role: string | null;
   created_at: string;
   updated_at: string;
 }

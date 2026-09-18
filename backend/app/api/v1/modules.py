@@ -13,6 +13,7 @@ from app.models.attendance import Attendance
 from app.models.enums import AttendanceStatus
 from app.models.exam import Exam, Mark
 from app.models.fee import FeeCategory, FeePayment, StudentFee
+from app.models.homework import Homework
 from app.models.notice import Notice
 from app.models.people import Guardian, Student
 from app.models.user import User
@@ -42,6 +43,7 @@ results_router = APIRouter(prefix="/results", tags=["results"])
 fees_router = APIRouter(prefix="/fees", tags=["fees"])
 reports_router = APIRouter(prefix="/reports", tags=["reports"])
 notices_router = APIRouter(prefix="/notices", tags=["notices"])
+homework_router = APIRouter(prefix="/homework", tags=["homework"])
 
 
 # ---- Guardians ----
@@ -77,7 +79,32 @@ def create_year(data: AcademicYearCreate, db: Session = Depends(get_db), _: User
 
 @academic_router.get("/years")
 def list_years(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
-    return [{"id": str(y.id), "name": y.name, "is_current": y.is_current} for y in db.scalars(select(AcademicYear))]
+    return [{"id": str(y.id), "name": y.name, "is_current": y.is_current, "start_date": y.start_date.isoformat(), "end_date": y.end_date.isoformat()} for y in db.scalars(select(AcademicYear))]
+
+
+@academic_router.patch("/years/{year_id}")
+def update_year(year_id: str, data: dict, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    y = db.get(AcademicYear, year_id)
+    if y is None:
+        raise HTTPException(status_code=404, detail="Academic year not found")
+    if data.get("is_current"):
+        for other in db.scalars(select(AcademicYear).where(AcademicYear.id != year_id)):
+            other.is_current = False
+    for key in ("name", "start_date", "end_date", "is_current"):
+        if key in data:
+            setattr(y, key, data[key])
+    db.commit()
+    db.refresh(y)
+    return {"id": str(y.id), "name": y.name, "is_current": y.is_current}
+
+
+@academic_router.delete("/years/{year_id}", status_code=204)
+def delete_year(year_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    y = db.get(AcademicYear, year_id)
+    if y is None:
+        raise HTTPException(status_code=404, detail="Academic year not found")
+    db.delete(y)
+    db.commit()
 
 
 @academic_router.post("/classes", status_code=201)
@@ -616,4 +643,80 @@ def delete_notice(
     if notice is None:
         raise HTTPException(status_code=404, detail="Notice not found")
     db.delete(notice)
+    db.commit()
+
+
+# ---- Homework ----
+@homework_router.post("", status_code=201)
+def create_homework(
+    data: dict,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin_or_teacher),
+):
+    from app.models.academic import SchoolClass
+
+    hw = Homework(
+        title=data["title"],
+        description=data.get("description"),
+        class_id=data["class_id"],
+        subject_id=data.get("subject_id"),
+        due_date=data.get("due_date"),
+        created_by=user.id,
+    )
+    db.add(hw)
+    db.commit()
+    db.refresh(hw)
+    cls = db.get(SchoolClass, hw.class_id)
+    return {
+        "id": str(hw.id),
+        "title": hw.title,
+        "description": hw.description,
+        "class_id": str(hw.class_id),
+        "class_name": cls.name if cls else None,
+        "subject_id": str(hw.subject_id) if hw.subject_id else None,
+        "due_date": hw.due_date.isoformat() if hw.due_date else None,
+        "created_at": hw.created_at.isoformat() if hw.created_at else None,
+    }
+
+
+@homework_router.get("")
+def list_homework(
+    class_id: str | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    from app.models.academic import SchoolClass, Subject
+
+    stmt = select(Homework).order_by(Homework.created_at.desc())
+    if class_id:
+        stmt = stmt.where(Homework.class_id == class_id)
+    rows = db.scalars(stmt).all()
+    out = []
+    for hw in rows:
+        cls = db.get(SchoolClass, hw.class_id) if hw.class_id else None
+        subj = db.get(Subject, hw.subject_id) if hw.subject_id else None
+        out.append({
+            "id": str(hw.id),
+            "title": hw.title,
+            "description": hw.description,
+            "class_id": str(hw.class_id),
+            "class_name": cls.name if cls else None,
+            "subject_id": str(hw.subject_id) if hw.subject_id else None,
+            "subject_name": subj.name if subj else None,
+            "due_date": hw.due_date.isoformat() if hw.due_date else None,
+            "created_at": hw.created_at.isoformat() if hw.created_at else None,
+        })
+    return out
+
+
+@homework_router.delete("/{homework_id}", status_code=204)
+def delete_homework(
+    homework_id: str,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin_or_teacher),
+):
+    hw = db.get(Homework, homework_id)
+    if hw is None:
+        raise HTTPException(status_code=404, detail="Homework not found")
+    db.delete(hw)
     db.commit()

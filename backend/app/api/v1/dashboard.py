@@ -1,5 +1,5 @@
 """Dashboard statistics endpoint for admin overview."""
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
@@ -85,3 +85,24 @@ def dashboard_stats(db: Session = Depends(get_db), _: User = Depends(get_current
             "total_due": float(total_due),
         },
     }
+
+
+@router.get("/weekly-attendance")
+def weekly_attendance(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    today = date.today()
+    days = []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        present = db.scalar(
+            select(func.count(Attendance.id)).where(
+                Attendance.date == d,
+                Attendance.status.in_([AttendanceStatus.PRESENT, AttendanceStatus.LATE]),
+            )
+        ) or 0
+        total = db.scalar(
+            select(func.count(Attendance.id)).where(Attendance.date == d)
+        ) or 0
+        day_name = d.strftime("%a")
+        pct = round((present / total * 100) if total else 0.0, 1)
+        days.append({"day": day_name, "present": present, "total": total, "percentage": pct})
+    return days

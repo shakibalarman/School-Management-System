@@ -6,3 +6,4 @@ export { StudentAttendancePage } from "./StudentAttendance";
 export { StudentExamsPage } from "./StudentExams";
 export { StudentFeesPage } from "./StudentFees";
 export { StudentNoticesPage } from "./StudentNotices";
+export { StudentHomeworkPage } from "./StudentHomework";

@@ -125,6 +125,7 @@ class TeacherCreate(BaseModel):
 
 class TeacherOut(BaseModel):
     id: uuid.UUID
+    user_id: uuid.UUID | None = None
     teacher_code: str
     first_name: str
     last_name: str
@@ -139,6 +140,7 @@ class TeacherOut(BaseModel):
     designation: str | None = None
     joining_date: date | None = None
     status: PersonStatus
+    user_role: str | None = None
 
     model_config = {"from_attributes": True}
 

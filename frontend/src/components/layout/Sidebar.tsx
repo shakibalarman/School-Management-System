@@ -6,7 +6,6 @@ import {
   BookOpen,
   ClipboardCheck,
   FileText,
-  Award,
   DollarSign,
   Settings,
   ChevronLeft,
@@ -16,6 +15,8 @@ import {
   User,
   Clock,
   Bell,
+  Calendar,
+  BookOpenCheck,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -50,6 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/classes", label: "Classes", icon: <BookOpen size={20} /> },
       { to: "/subjects", label: "Subjects", icon: <BookOpen size={20} /> },
+      { to: "/academic-years", label: "Academic Years", icon: <Calendar size={20} />, adminOnly: true },
       { to: "/schedule", label: "Class Routine", icon: <Clock size={20} />, adminOnly: true },
     ],
   },
@@ -65,7 +67,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Examination",
     items: [
       { to: "/exams", label: "Exams", icon: <FileText size={20} /> },
-      { to: "/results", label: "Results", icon: <Award size={20} /> },
+      { to: "/homework", label: "Homework", icon: <BookOpenCheck size={20} /> },
     ],
   },
   {
@@ -74,7 +76,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Communication",
-    items: [{ to: "/notices", label: "Notices", icon: <Bell size={20} />, adminOnly: true }],
+    items: [{ to: "/notices", label: "Notices", icon: <Bell size={20} /> }],
   },
   {
     label: "System",

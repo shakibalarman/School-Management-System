@@ -9,6 +9,7 @@ from app.api.v1.modules import (
     exams_router,
     fees_router,
     guardians_router,
+    homework_router,
     notices_router,
     reports_router,
     results_router,
@@ -36,4 +37,5 @@ api_router.include_router(results_router)
 api_router.include_router(fees_router)
 api_router.include_router(reports_router)
 api_router.include_router(notices_router)
+api_router.include_router(homework_router)
 api_router.include_router(student_portal_router)

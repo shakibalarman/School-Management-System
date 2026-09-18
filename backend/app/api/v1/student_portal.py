@@ -13,6 +13,7 @@ from app.models.attendance import Attendance
 from app.models.enums import AttendanceStatus, DayOfWeek, FeeStatus
 from app.models.exam import Exam, Mark
 from app.models.fee import FeeCategory, FeePayment, StudentFee
+from app.models.homework import Homework
 from app.models.notice import Notice
 from app.models.people import Student, Teacher
 from app.models.user import User
@@ -163,12 +164,16 @@ def get_my_exams(user: User = Depends(get_current_user), db: Session = Depends(g
         .where(Mark.student_id == student.id)
         .order_by(Exam.start_date.desc())
     ).all()
+    subject_ids = {m[0].subject_id for m in marks}
+    subjects = {s.id: s for s in db.scalars(select(Subject).where(Subject.id.in_(subject_ids)))} if subject_ids else {}
     return [
         {
             "exam_id": str(m[1].id),
             "exam_name": m[1].name,
             "exam_type": m[1].exam_type.value,
             "subject_id": str(m[0].subject_id),
+            "subject_name": subjects[m[0].subject_id].name if m[0].subject_id in subjects else "Unknown",
+            "subject_code": subjects[m[0].subject_id].code if m[0].subject_id in subjects else "",
             "marks": m[0].marks,
             "start_date": m[1].start_date.isoformat() if m[1].start_date else None,
             "end_date": m[1].end_date.isoformat() if m[1].end_date else None,
@@ -223,6 +228,31 @@ def get_my_notices(user: User = Depends(get_current_user), db: Session = Depends
         }
         for n in notices
     ]
+
+
+@router.get("/homework")
+def get_my_homework(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    student = _get_student_profile(user, db)
+    if not student.class_id:
+        return []
+    stmt = (
+        select(Homework)
+        .where(Homework.class_id == student.class_id)
+        .order_by(Homework.created_at.desc())
+    )
+    rows = db.scalars(stmt).limit(50).all()
+    out = []
+    for hw in rows:
+        subj = db.get(Subject, hw.subject_id) if hw.subject_id else None
+        out.append({
+            "id": str(hw.id),
+            "title": hw.title,
+            "description": hw.description,
+            "subject_name": subj.name if subj else None,
+            "due_date": hw.due_date.isoformat() if hw.due_date else None,
+            "created_at": hw.created_at.isoformat() if hw.created_at else None,
+        })
+    return out
 
 
 @router.get("/schedule")

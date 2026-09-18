@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, require_admin_or_head_teacher
+from app.core.deps import get_current_user, require_admin, require_admin_or_head_teacher
 from app.core.security import hash_password
 from app.models.academic import TeacherClassAssignment, TeacherSubjectAssignment
 from app.models.enums import PersonStatus
@@ -60,7 +60,17 @@ def list_teachers(
     skip: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db), _: User = Depends(get_current_user),
 ):
-    return list(db.scalars(select(Teacher).order_by(Teacher.created_at.desc()).offset(skip).limit(limit)))
+    teachers = list(db.scalars(select(Teacher).order_by(Teacher.created_at.desc()).offset(skip).limit(limit)))
+    out = []
+    for t in teachers:
+        role = None
+        if t.user_id:
+            user = db.get(User, t.user_id)
+            role = user.role.value if user else None
+        d = {c.key: getattr(t, c.key) for c in Teacher.__table__.columns}
+        d["user_role"] = role
+        out.append(d)
+    return out
 
 
 @router.get("/{teacher_id}", response_model=TeacherOut)
@@ -68,7 +78,13 @@ def get_teacher(teacher_id: str, db: Session = Depends(get_db), _: User = Depend
     t = db.get(Teacher, teacher_id)
     if t is None:
         raise HTTPException(status_code=404, detail="Teacher not found")
-    return t
+    role = None
+    if t.user_id:
+        user = db.get(User, t.user_id)
+        role = user.role.value if user else None
+    d = {c.key: getattr(t, c.key) for c in Teacher.__table__.columns}
+    d["user_role"] = role
+    return d
 
 
 @router.patch("/{teacher_id}/deactivate", response_model=TeacherOut)
@@ -104,6 +120,38 @@ def delete_teacher(teacher_id: str, db: Session = Depends(get_db), _: User = Dep
             db.delete(user)
     db.delete(t)
     db.commit()
+
+
+@router.patch("/{teacher_id}/promote", response_model=TeacherOut)
+def promote_to_head_teacher(teacher_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    t = db.get(Teacher, teacher_id)
+    if t is None:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    if not t.user_id:
+        raise HTTPException(status_code=400, detail="Teacher has no login account")
+    user = db.get(User, t.user_id)
+    if user is None:
+        raise HTTPException(status_code=400, detail="Linked user not found")
+    user.role = UserRole.HEAD_TEACHER
+    db.commit()
+    db.refresh(t)
+    return t
+
+
+@router.patch("/{teacher_id}/demote", response_model=TeacherOut)
+def demote_to_teacher(teacher_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    t = db.get(Teacher, teacher_id)
+    if t is None:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    if not t.user_id:
+        raise HTTPException(status_code=400, detail="Teacher has no login account")
+    user = db.get(User, t.user_id)
+    if user is None:
+        raise HTTPException(status_code=400, detail="Linked user not found")
+    user.role = UserRole.TEACHER
+    db.commit()
+    db.refresh(t)
+    return t
 
 
 # ─── Subject assignments ────────────────────────────────────────────

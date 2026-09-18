@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   School,
+  BookOpenCheck,
 } from "lucide-react";
 
 interface NavItem {
@@ -27,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/student/attendance", label: "Attendance", icon: <ClipboardCheck size={20} /> },
   { to: "/student/exams", label: "Exams & Results", icon: <Award size={20} /> },
   { to: "/student/fees", label: "Fees & Payments", icon: <DollarSign size={20} /> },
+  { to: "/student/homework", label: "Homework", icon: <BookOpenCheck size={20} /> },
   { to: "/student/notices", label: "Notices", icon: <Bell size={20} /> },
 ];
 

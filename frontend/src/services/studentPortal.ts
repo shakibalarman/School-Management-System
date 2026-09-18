@@ -48,6 +48,8 @@ export interface StudentExam {
   exam_name: string;
   exam_type: string;
   subject_id: string;
+  subject_name: string;
+  subject_code: string;
   marks: number;
   start_date: string | null;
   end_date: string | null;
@@ -68,6 +70,15 @@ export interface StudentNotice {
   title: string;
   content: string;
   target_role: string;
+  created_at: string | null;
+}
+
+export interface StudentHomework {
+  id: string;
+  title: string;
+  description: string | null;
+  subject_name: string | null;
+  due_date: string | null;
   created_at: string | null;
 }
 
@@ -106,5 +117,10 @@ export async function getMyFees(): Promise<StudentFee[]> {
 
 export async function getMyNotices(): Promise<StudentNotice[]> {
   const { data } = await api.get("/student/notices");
+  return data;
+}
+
+export async function getMyHomework(): Promise<StudentHomework[]> {
+  const { data } = await api.get("/student/homework");
   return data;
 }

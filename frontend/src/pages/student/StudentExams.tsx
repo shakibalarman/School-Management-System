@@ -59,7 +59,7 @@ export function StudentExamsPage() {
 
                       return (
                         <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
-                          <td className="px-6 py-3 text-sm font-medium text-slate-800">Subject {i + 1}</td>
+                          <td className="px-6 py-3 text-sm font-medium text-slate-800">{e.subject_name}</td>
                           <td className="px-6 py-3 text-sm text-slate-600">{marks}</td>
                           <td className="px-6 py-3">
                             <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
