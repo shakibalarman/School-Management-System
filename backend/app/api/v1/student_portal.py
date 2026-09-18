@@ -158,51 +158,66 @@ def get_my_attendance(
 @router.get("/exams")
 def get_my_exams(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     student = _get_student_profile(user, db)
-    marks = db.scalars(
+    rows = db.execute(
         select(Mark, Exam)
         .join(Exam, Mark.exam_id == Exam.id)
         .where(Mark.student_id == student.id)
         .order_by(Exam.start_date.desc())
     ).all()
-    subject_ids = {m[0].subject_id for m in marks}
+    subject_ids = {r[0].subject_id for r in rows}
     subjects = {s.id: s for s in db.scalars(select(Subject).where(Subject.id.in_(subject_ids)))} if subject_ids else {}
     return [
         {
-            "exam_id": str(m[1].id),
-            "exam_name": m[1].name,
-            "exam_type": m[1].exam_type.value,
-            "subject_id": str(m[0].subject_id),
-            "subject_name": subjects[m[0].subject_id].name if m[0].subject_id in subjects else "Unknown",
-            "subject_code": subjects[m[0].subject_id].code if m[0].subject_id in subjects else "",
-            "marks": m[0].marks,
-            "start_date": m[1].start_date.isoformat() if m[1].start_date else None,
-            "end_date": m[1].end_date.isoformat() if m[1].end_date else None,
+            "exam_id": str(r[1].id),
+            "exam_name": r[1].name,
+            "exam_type": r[1].exam_type.value,
+            "subject_id": str(r[0].subject_id),
+            "subject_name": subjects[r[0].subject_id].name if r[0].subject_id in subjects else "Unknown",
+            "subject_code": subjects[r[0].subject_id].code if r[0].subject_id in subjects else "",
+            "marks": r[0].marks,
+            "start_date": r[1].start_date.isoformat() if r[1].start_date else None,
+            "end_date": r[1].end_date.isoformat() if r[1].end_date else None,
         }
-        for m in marks
+        for r in rows
     ]
 
 
 @router.get("/fees")
 def get_my_fees(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     student = _get_student_profile(user, db)
-    fees = db.scalars(
+    fee_rows = db.execute(
         select(StudentFee, FeeCategory)
         .join(FeeCategory, StudentFee.fee_category_id == FeeCategory.id)
         .where(StudentFee.student_id == student.id)
         .order_by(StudentFee.created_at.desc())
     ).all()
-    return [
-        {
-            "id": str(f[0].id),
-            "category": f[1].name.value,
-            "total_amount": float(f[0].total_amount),
-            "paid_amount": float(f[0].paid_amount),
-            "due_amount": float(f[0].total_amount) - float(f[0].paid_amount),
-            "status": f[0].status.value,
-            "due_date": f[0].due_date.isoformat() if f[0].due_date else None,
-        }
-        for f in fees
-    ]
+    result = []
+    for row in fee_rows:
+        sf, cat = row[0], row[1]
+        # Get payment history for this fee
+        payments = db.scalars(
+            select(FeePayment).where(FeePayment.student_fee_id == sf.id).order_by(FeePayment.payment_date.desc())
+        ).all()
+        result.append({
+            "id": str(sf.id),
+            "category": cat.name.value,
+            "total_amount": float(sf.total_amount),
+            "paid_amount": float(sf.paid_amount),
+            "due_amount": float(sf.total_amount) - float(sf.paid_amount),
+            "status": sf.status.value,
+            "due_date": sf.due_date.isoformat() if sf.due_date else None,
+            "payments": [
+                {
+                    "id": str(p.id),
+                    "amount": float(p.amount),
+                    "payment_date": p.payment_date.isoformat(),
+                    "payment_method": p.payment_method,
+                    "transaction_ref": p.transaction_ref,
+                }
+                for p in payments
+            ],
+        })
+    return result
 
 
 @router.get("/notices")

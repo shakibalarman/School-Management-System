@@ -1,4 +1,5 @@
 """Guardians, academic structure, attendance, exams/marks, fees, reports, notices."""
+import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -398,11 +399,149 @@ def enter_marks(exam_id: str, data: MarksBulkIn, user: User = Depends(require_ad
 
 
 # ---- Results (computed grades) ----
+@results_router.get("/all")
+def all_results(
+    exam_id: str = Query(...),
+    class_id: str | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Admin: all student results for a given exam, optionally filtered by class."""
+    stmt = select(Mark).where(Mark.exam_id == exam_id)
+    if class_id:
+        student_ids = [s.id for s in db.scalars(select(Student).where(Student.class_id == class_id))]
+        stmt = stmt.where(Mark.student_id.in_(student_ids))
+    marks = list(db.scalars(stmt))
+    subjects = {s.id: s for s in db.scalars(select(Subject))}
+    students_map = {s.id: s for s in db.scalars(select(Student))}
+
+    # Group by student
+    by_student: dict[str, list] = {}
+    for m in marks:
+        by_student.setdefault(str(m.student_id), []).append(m)
+
+    results = []
+    for sid, smarks in by_student.items():
+        student = students_map.get(uuid.UUID(sid) if not isinstance(sid, uuid.UUID) else sid)
+        rows = []
+        total = 0.0
+        for m in smarks:
+            grade, gpa = grade_for(float(m.marks))
+            subj = subjects.get(m.subject_id)
+            rows.append({
+                "subject": subj.name if subj else str(m.subject_id),
+                "marks": float(m.marks),
+                "grade": grade,
+                "gpa": gpa,
+            })
+            total += float(m.marks)
+        avg = round(total / len(rows), 1) if rows else 0
+        summary = summarize_marks([r["marks"] for r in rows])
+        results.append({
+            "student_id": sid,
+            "student_name": f"{student.first_name} {student.last_name}" if student else sid,
+            "student_code": student.student_code if student else None,
+            "class_id": str(student.class_id) if student else None,
+            "rows": rows,
+            "total": summary["total"],
+            "average": avg,
+            "gpa": summary["gpa"],
+            "result": summary["result"],
+        })
+    return results
+
+
+@results_router.get("/overall")
+def overall_results(
+    exam_id: str = Query(...),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Admin: overall summary — class-wise pass rate, averages, toppers."""
+    exam = db.get(Exam, exam_id)
+    if exam is None:
+        raise HTTPException(status_code=404, detail="Exam not found")
+
+    marks = list(db.scalars(select(Mark).where(Mark.exam_id == exam_id)))
+    if not marks:
+        return {"exam": exam.name, "classes": [], "summary": {}}
+
+    students_map = {s.id: s for s in db.scalars(select(Student))}
+    classes_map = {c.id: c for c in db.scalars(select(SchoolClass))}
+    subjects = {s.id: s for s in db.scalars(select(Subject))}
+
+    # Group marks by class -> student
+    class_student_marks: dict[str, dict[str, list]] = {}
+    for m in marks:
+        stu = students_map.get(m.student_id)
+        if stu and stu.class_id:
+            cid = str(stu.class_id)
+            sid = str(m.student_id)
+            class_student_marks.setdefault(cid, {}).setdefault(sid, []).append(m)
+
+    class_results = []
+    all_students_data = []
+    for cid, student_marks_map in class_student_marks.items():
+        cls = classes_map.get(uuid.UUID(cid))
+        student_results = []
+        for sid, smarks in student_marks_map.items():
+            stu = students_map.get(uuid.UUID(sid))
+            total = sum(float(m.marks) for m in smarks)
+            avg = round(total / len(smarks), 1) if smarks else 0
+            summary = summarize_marks([float(m.marks) for m in smarks])
+            student_results.append({
+                "student_id": sid,
+                "student_name": f"{stu.first_name} {stu.last_name}" if stu else sid,
+                "student_code": stu.student_code if stu else None,
+                "gpa": summary["gpa"],
+                "average": avg,
+                "result": summary["result"],
+                "total": summary["total"],
+                "subjects": len(smarks),
+            })
+
+        student_results.sort(key=lambda x: x["gpa"], reverse=True)
+        passed = sum(1 for s in student_results if s["result"] == "pass")
+        total_students = len(student_results)
+        avg_gpa = round(sum(s["gpa"] for s in student_results) / total_students, 2) if total_students else 0
+        avg_marks = round(sum(s["average"] for s in student_results) / total_students, 1) if total_students else 0
+
+        class_results.append({
+            "class_id": cid,
+            "class_name": cls.name if cls else cid,
+            "total_students": total_students,
+            "passed": passed,
+            "failed": total_students - passed,
+            "pass_rate": round(passed / total_students * 100, 1) if total_students else 0,
+            "avg_gpa": avg_gpa,
+            "avg_marks": avg_marks,
+            "topper": student_results[0] if student_results else None,
+            "students": student_results,
+        })
+        all_students_data.extend(student_results)
+
+    class_results.sort(key=lambda x: x["avg_gpa"], reverse=True)
+    all_students_data.sort(key=lambda x: x["gpa"], reverse=True)
+
+    total_all = len(all_students_data)
+    passed_all = sum(1 for s in all_students_data if s["result"] == "pass")
+    overall = {
+        "total_students": total_all,
+        "passed": passed_all,
+        "failed": total_all - passed_all,
+        "pass_rate": round(passed_all / total_all * 100, 1) if total_all else 0,
+        "avg_gpa": round(sum(s["gpa"] for s in all_students_data) / total_all, 2) if total_all else 0,
+        "avg_marks": round(sum(s["average"] for s in all_students_data) / total_all, 1) if total_all else 0,
+        "toppers": all_students_data[:5],
+    }
+    return {"exam": exam.name, "classes": class_results, "summary": overall}
+
+
 @results_router.get("/student/{student_id}/exam/{exam_id}")
 def student_result(student_id: str, exam_id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     marks = list(db.scalars(select(Mark).where(Mark.student_id == student_id, Mark.exam_id == exam_id)))
     if not marks:
-        raise HTTPException(status_code=404, detail="No marks found")
+        return {"rows": [], "total": 0, "average": 0, "gpa": 0.0, "result": "no_data", "total_label": "0/0"}
     subjects = {s.id: s for s in db.scalars(select(Subject))}
     rows = []
     for m in marks:
@@ -488,6 +627,8 @@ def bulk_assign_fees(data: FeeBulkAssignIn, db: Session = Depends(get_db), _: Us
             ))
             count += 1
     db.commit()
+    # Auto-check: new fees assigned may push students over threshold
+    _check_and_send_due_notices(db)
     return {"ok": True, "assigned": count, "total_students": len(students)}
 
 
@@ -529,12 +670,58 @@ def pay_invoice(
     if inv.due_date and inv.due_date < date.today() and inv.status != FeeStatus.PAID:
         inv.status = FeeStatus.OVERDUE
     db.commit()
+    # Auto-check: if this student's total due drops below threshold, no new notice
+    # If still above, the next manual trigger or assignment will catch it
     return {"ok": True, "paid": new_paid, "due": float(inv.total_amount) - new_paid}
 
 
 @fees_router.get("/invoices/student/{student_id}", response_model=list[StudentFeeOut])
 def invoices_for_student(student_id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     return list(db.scalars(select(StudentFee).where(StudentFee.student_id == student_id)))
+
+
+DUE_THRESHOLD = 2000
+
+
+def _check_and_send_due_notices(db: Session) -> dict:
+    """Check all students with total due > threshold and send notices. Returns summary."""
+    from app.models.enums import PersonStatus
+
+    students = list(db.scalars(select(Student).where(Student.status == PersonStatus.ACTIVE)))
+    notified = 0
+    for stu in students:
+        total_due = db.scalar(
+            select(func.coalesce(func.sum(StudentFee.total_amount - StudentFee.paid_amount), 0))
+            .where(StudentFee.student_id == stu.id)
+        ) or 0
+        if float(total_due) > DUE_THRESHOLD:
+            # Check if a notice already exists today for this student
+            from datetime import date as _date
+            today = _date.today()
+            existing = db.scalar(
+                select(Notice).where(
+                    Notice.title == f"Fee Due Reminder - {stu.first_name} {stu.last_name}",
+                    Notice.class_id == stu.class_id,
+                )
+            )
+            if existing is None:
+                notice = Notice(
+                    title=f"Fee Due Reminder - {stu.first_name} {stu.last_name}",
+                    content=f"Dear {stu.first_name} {stu.last_name} ({stu.student_code}), your total outstanding fee amount is ৳{float(total_due):,.0f}. Please clear your dues before the due date to avoid late fees.",
+                    target_role="student",
+                    class_id=stu.class_id,
+                    published=True,
+                )
+                db.add(notice)
+                notified += 1
+    db.commit()
+    return {"total_students_checked": len(students), "notified": notified, "threshold": DUE_THRESHOLD}
+
+
+@fees_router.post("/check-due-notices")
+def trigger_due_notice_check(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """Manually trigger check: send notices to students with total due > ৳2000."""
+    return _check_and_send_due_notices(db)
 
 
 # ---- Reports ----

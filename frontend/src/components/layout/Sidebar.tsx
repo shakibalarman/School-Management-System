@@ -17,6 +17,7 @@ import {
   Bell,
   Calendar,
   BookOpenCheck,
+  BarChart3,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -44,6 +45,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/students", label: "Students", icon: <GraduationCap size={20} /> },
       { to: "/teachers", label: "Teachers", icon: <Users size={20} />, adminOnly: true },
+      { to: "/my-classes", label: "My Classes", icon: <BookOpen size={20} />, teacherOnly: true },
     ],
   },
   {
@@ -53,6 +55,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/subjects", label: "Subjects", icon: <BookOpen size={20} /> },
       { to: "/academic-years", label: "Academic Years", icon: <Calendar size={20} />, adminOnly: true },
       { to: "/schedule", label: "Class Routine", icon: <Clock size={20} />, adminOnly: true },
+      { to: "/my-routine", label: "My Routine", icon: <Clock size={20} />, teacherOnly: true },
     ],
   },
   {
@@ -67,6 +70,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Examination",
     items: [
       { to: "/exams", label: "Exams", icon: <FileText size={20} /> },
+      { to: "/results", label: "Results", icon: <BarChart3 size={20} /> },
       { to: "/homework", label: "Homework", icon: <BookOpenCheck size={20} /> },
     ],
   },
@@ -116,6 +120,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {NAV_GROUPS.map((group) => {
           const visibleItems = group.items.filter((item) => {
             if (item.adminOnly && !isAdmin && !isHeadTeacher) return false;
+            if (item.teacherOnly && user?.role !== "teacher" && !isAdmin && !isHeadTeacher) return false;
             if (item.studentOnly && !isStudent) return false;
             return true;
           });

@@ -55,6 +55,14 @@ export interface StudentExam {
   end_date: string | null;
 }
 
+export interface FeePayment {
+  id: string;
+  amount: number;
+  payment_date: string;
+  payment_method: string | null;
+  transaction_ref: string | null;
+}
+
 export interface StudentFee {
   id: string;
   category: string;
@@ -63,6 +71,7 @@ export interface StudentFee {
   due_amount: number;
   status: string;
   due_date: string | null;
+  payments: FeePayment[];
 }
 
 export interface StudentNotice {

@@ -19,6 +19,9 @@ import { ExamsPage } from "./pages/Exams";
 import { NoticesPage } from "./pages/Notices";
 import { AcademicYearsPage } from "./pages/AcademicYears";
 import { HomeworkPage } from "./pages/Homework";
+import { ResultsPage } from "./pages/Results";
+import { TeacherRoutinePage } from "./pages/TeacherRoutine";
+import { TeacherClassesPage } from "./pages/TeacherClasses";
 import {
   StudentDashboardPage,
   StudentProfilePage,
@@ -59,11 +62,14 @@ export default function App() {
               <Route path="schedule" element={<ProtectedRoute roles={["admin", "head_teacher"]}><SchedulePage /></ProtectedRoute>} />
               <Route path="fees" element={<ProtectedRoute roles={["admin"]}><FeesPage /></ProtectedRoute>} />
               <Route path="exams" element={<ProtectedRoute roles={["admin", "head_teacher", "teacher"]}><ExamsPage /></ProtectedRoute>} />
+              <Route path="results" element={<ProtectedRoute roles={["admin", "head_teacher", "teacher"]}><ResultsPage /></ProtectedRoute>} />
               <Route path="homework" element={<ProtectedRoute roles={["admin", "head_teacher", "teacher"]}><HomeworkPage /></ProtectedRoute>} />
               <Route path="notices" element={<ProtectedRoute roles={["admin", "head_teacher"]}><NoticesPage /></ProtectedRoute>} />
               <Route path="attendance" element={<ProtectedRoute roles={["admin", "head_teacher", "teacher"]}><TakeAttendancePage /></ProtectedRoute>} />
               <Route path="attendance/view" element={<ProtectedRoute roles={["admin", "head_teacher"]}><AttendanceViewPage /></ProtectedRoute>} />
               <Route path="attendance/my" element={<MyAttendancePage />} />
+              <Route path="my-routine" element={<ProtectedRoute roles={["teacher"]}><TeacherRoutinePage /></ProtectedRoute>} />
+              <Route path="my-classes" element={<ProtectedRoute roles={["teacher"]}><TeacherClassesPage /></ProtectedRoute>} />
             </Route>
 
             {/* Student portal routes */}
