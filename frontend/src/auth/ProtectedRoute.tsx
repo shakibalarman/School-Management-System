@@ -25,6 +25,7 @@ export function ProtectedRoute({
   if (!user) return <Navigate to="/login" replace />;
   if (roles && !roles.includes(user.role)) {
     if (user.role === "student") return <Navigate to="/student" replace />;
+    if (user.role === "head_teacher") return <Navigate to="/teachers" replace />;
     return <Navigate to="/" replace />;
   }
 

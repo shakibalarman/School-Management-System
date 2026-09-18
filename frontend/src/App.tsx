@@ -15,6 +15,8 @@ import { FeesPage } from "./pages/Fees";
 import { TakeAttendancePage } from "./pages/TakeAttendance";
 import { AttendanceViewPage } from "./pages/AttendanceView";
 import { MyAttendancePage } from "./pages/MyAttendance";
+import { ExamsPage } from "./pages/Exams";
+import { NoticesPage } from "./pages/Notices";
 import {
   StudentDashboardPage,
   StudentProfilePage,
@@ -40,20 +42,22 @@ export default function App() {
             <Route
               path="/"
               element={
-                <ProtectedRoute roles={["admin", "teacher"]}>
+                <ProtectedRoute roles={["admin", "head_teacher", "teacher"]}>
                   <AdminLayout />
                 </ProtectedRoute>
               }
             >
               <Route index element={<Dashboard />} />
-              <Route path="students" element={<StudentsPage />} />
-              <Route path="teachers" element={<ProtectedRoute roles={["admin"]}><TeachersPage /></ProtectedRoute>} />
-              <Route path="classes" element={<ClassesPage />} />
-              <Route path="subjects" element={<SubjectsPage />} />
-              <Route path="schedule" element={<ProtectedRoute roles={["admin"]}><SchedulePage /></ProtectedRoute>} />
+              <Route path="students" element={<ProtectedRoute roles={["admin", "head_teacher"]}><StudentsPage /></ProtectedRoute>} />
+              <Route path="teachers" element={<ProtectedRoute roles={["admin", "head_teacher"]}><TeachersPage /></ProtectedRoute>} />
+              <Route path="classes" element={<ProtectedRoute roles={["admin", "head_teacher"]}><ClassesPage /></ProtectedRoute>} />
+              <Route path="subjects" element={<ProtectedRoute roles={["admin", "head_teacher"]}><SubjectsPage /></ProtectedRoute>} />
+              <Route path="schedule" element={<ProtectedRoute roles={["admin", "head_teacher"]}><SchedulePage /></ProtectedRoute>} />
               <Route path="fees" element={<ProtectedRoute roles={["admin"]}><FeesPage /></ProtectedRoute>} />
-              <Route path="attendance" element={<TakeAttendancePage />} />
-              <Route path="attendance/view" element={<ProtectedRoute roles={["admin"]}><AttendanceViewPage /></ProtectedRoute>} />
+              <Route path="exams" element={<ProtectedRoute roles={["admin", "head_teacher", "teacher"]}><ExamsPage /></ProtectedRoute>} />
+              <Route path="notices" element={<ProtectedRoute roles={["admin", "head_teacher"]}><NoticesPage /></ProtectedRoute>} />
+              <Route path="attendance" element={<ProtectedRoute roles={["admin", "head_teacher", "teacher"]}><TakeAttendancePage /></ProtectedRoute>} />
+              <Route path="attendance/view" element={<ProtectedRoute roles={["admin", "head_teacher"]}><AttendanceViewPage /></ProtectedRoute>} />
               <Route path="attendance/my" element={<MyAttendancePage />} />
             </Route>
 

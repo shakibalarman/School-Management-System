@@ -119,6 +119,7 @@ class TeacherCreate(BaseModel):
     designation: str | None = None
     joining_date: date | None = None
     create_login: bool = False
+    login_role: str | None = None
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
 

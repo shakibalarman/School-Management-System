@@ -6,7 +6,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, require_admin
+from app.core.deps import get_current_user, require_admin_or_head_teacher
 from app.core.security import hash_password
 from app.models.people import Guardian, Student
 from app.models.user import User, UserRole
@@ -20,7 +20,7 @@ def _gen_code() -> str:
 
 
 @router.post("", response_model=StudentOut, status_code=201)
-def create_student(data: StudentCreate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def create_student(data: StudentCreate, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
     if data.email and db.scalar(select(Student).where(Student.email == data.email.lower().strip())):
         raise HTTPException(status_code=400, detail="Student email already exists")
     student = Student(
@@ -101,7 +101,7 @@ def get_student(student_id: str, db: Session = Depends(get_db), _: User = Depend
 
 
 @router.patch("/{student_id}", response_model=StudentOut)
-def update_student(student_id: str, data: StudentUpdate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def update_student(student_id: str, data: StudentUpdate, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
     s = db.get(Student, student_id)
     if s is None:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -113,7 +113,7 @@ def update_student(student_id: str, data: StudentUpdate, db: Session = Depends(g
 
 
 @router.post("/{student_id}/guardians/{guardian_id}", response_model=StudentOut)
-def assign_guardian(student_id: str, guardian_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def assign_guardian(student_id: str, guardian_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
     s = db.get(Student, student_id)
     g = db.get(Guardian, guardian_id)
     if s is None or g is None:

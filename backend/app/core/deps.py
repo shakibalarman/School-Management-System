@@ -43,5 +43,7 @@ def require_roles(*roles: UserRole):
 
 
 require_admin = require_roles(UserRole.ADMIN)
+require_head_teacher = require_roles(UserRole.HEAD_TEACHER)
 require_teacher = require_roles(UserRole.TEACHER)
 require_admin_or_teacher = require_roles(UserRole.ADMIN, UserRole.TEACHER)
+require_admin_or_head_teacher = require_roles(UserRole.ADMIN, UserRole.HEAD_TEACHER)

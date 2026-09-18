@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, require_admin
+from app.core.deps import get_current_user, require_admin_or_head_teacher
 from app.models.academic import TeacherSchedule
 from app.models.enums import DayOfWeek
 from app.models.people import Teacher
@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 @router.post("/teacher/{teacher_id}", response_model=TeacherScheduleOut, status_code=201)
-def create_schedule(teacher_id: str, data: TeacherScheduleCreate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def create_schedule(teacher_id: str, data: TeacherScheduleCreate, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
     if db.get(Teacher, teacher_id) is None:
         raise HTTPException(status_code=404, detail="Teacher not found")
     if data.end_time <= data.start_time:
@@ -83,7 +83,7 @@ def get_schedule(schedule_id: str, db: Session = Depends(get_db), _: User = Depe
 
 
 @router.put("/{schedule_id}", response_model=TeacherScheduleOut)
-def update_schedule(schedule_id: str, data: TeacherScheduleCreate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def update_schedule(schedule_id: str, data: TeacherScheduleCreate, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
     entry = db.get(TeacherSchedule, schedule_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="Schedule entry not found")
@@ -109,7 +109,7 @@ def update_schedule(schedule_id: str, data: TeacherScheduleCreate, db: Session =
 
 
 @router.delete("/{schedule_id}", status_code=204)
-def delete_schedule(schedule_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def delete_schedule(schedule_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
     entry = db.get(TeacherSchedule, schedule_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="Schedule entry not found")

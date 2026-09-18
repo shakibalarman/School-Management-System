@@ -48,6 +48,7 @@ export async function createTeacher(teacher: {
   designation?: string;
   joining_date?: string;
   create_login?: boolean;
+  login_role?: string;
   password?: string;
 }): Promise<Teacher> {
   const { data } = await api.post("/teachers", teacher);
@@ -62,4 +63,8 @@ export async function deactivateTeacher(id: string): Promise<Teacher> {
 export async function activateTeacher(id: string): Promise<Teacher> {
   const { data } = await api.patch(`/teachers/${id}/activate`);
   return data;
+}
+
+export async function deleteTeacher(id: string): Promise<void> {
+  await api.delete(`/teachers/${id}`);
 }

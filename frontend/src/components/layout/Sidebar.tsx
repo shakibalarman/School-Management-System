@@ -15,6 +15,7 @@ import {
   Eye,
   User,
   Clock,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -72,6 +73,10 @@ const NAV_GROUPS: NavGroup[] = [
     items: [{ to: "/fees", label: "Fees", icon: <DollarSign size={20} />, adminOnly: true }],
   },
   {
+    label: "Communication",
+    items: [{ to: "/notices", label: "Notices", icon: <Bell size={20} />, adminOnly: true }],
+  },
+  {
     label: "System",
     items: [{ to: "/settings", label: "Settings", icon: <Settings size={20} /> }],
   },
@@ -85,6 +90,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isHeadTeacher = user?.role === "head_teacher";
   const isStudent = user?.role === "student";
 
   return (
@@ -107,7 +113,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
         {NAV_GROUPS.map((group) => {
           const visibleItems = group.items.filter((item) => {
-            if (item.adminOnly && !isAdmin) return false;
+            if (item.adminOnly && !isAdmin && !isHeadTeacher) return false;
             if (item.studentOnly && !isStudent) return false;
             return true;
           });

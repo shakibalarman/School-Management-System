@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, require_admin, require_admin_or_teacher
+from app.core.deps import get_current_user, require_admin, require_admin_or_head_teacher, require_admin_or_teacher
 from app.core.grading import grade_for, summarize_marks
 from app.models.academic import AcademicYear, ClassSubject, SchoolClass, Section, Subject
 from app.models.attendance import Attendance
@@ -160,6 +160,14 @@ def link_subject(class_id: str, subject_id: str, db: Session = Depends(get_db), 
         db.rollback()
         raise HTTPException(status_code=400, detail="Already linked or invalid")
     return {"ok": True}
+
+
+@academic_router.get("/classes/{class_id}/subjects")
+def list_class_subjects(class_id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    rows = db.scalars(select(ClassSubject).where(ClassSubject.class_id == class_id)).all()
+    subject_ids = [r.subject_id for r in rows]
+    subjects = db.scalars(select(Subject).where(Subject.id.in_(subject_ids))) if subject_ids else []
+    return [{"id": str(s.id), "name": s.name, "code": s.code} for s in subjects]
 
 
 # ---- Attendance ----
@@ -531,7 +539,7 @@ def report_card(student_id: str, exam_id: str, db: Session = Depends(get_db), _:
 def create_notice(
     data: dict,
     db: Session = Depends(get_db),
-    user: User = Depends(require_admin),
+    user: User = Depends(require_admin_or_head_teacher),
 ):
     notice = Notice(
         title=data["title"],
@@ -577,7 +585,7 @@ def update_notice(
     notice_id: str,
     data: dict,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    _: User = Depends(require_admin_or_head_teacher),
 ):
     notice = db.get(Notice, notice_id)
     if notice is None:
@@ -602,7 +610,7 @@ def update_notice(
 def delete_notice(
     notice_id: str,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    _: User = Depends(require_admin_or_head_teacher),
 ):
     notice = db.get(Notice, notice_id)
     if notice is None:

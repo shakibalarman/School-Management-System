@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 
-export type Role = "admin" | "teacher" | "student" | "guardian";
+export type Role = "admin" | "head_teacher" | "teacher" | "student" | "guardian";
 
 interface SessionUser {
   id: string;

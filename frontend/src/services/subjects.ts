@@ -6,6 +6,11 @@ export async function listSubjects(): Promise<Subject[]> {
   return data;
 }
 
+export async function listClassSubjects(classId: string): Promise<Subject[]> {
+  const { data } = await api.get(`/academic/classes/${classId}/subjects`);
+  return data;
+}
+
 export async function createSubject(subject: {
   name: string;
   code: string;

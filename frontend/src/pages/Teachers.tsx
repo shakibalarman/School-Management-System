@@ -3,12 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Search, X, Loader2, UserCheck, UserX, BookOpen, Users } from "lucide-react";
+import { Plus, Search, X, Loader2, UserCheck, UserX, Trash2, BookOpen, Users } from "lucide-react";
 import {
   listTeachers,
   createTeacher,
   deactivateTeacher,
   activateTeacher,
+  deleteTeacher,
   getTeacherClasses,
   getTeacherSubjects,
 } from "../services/teachers";
@@ -35,6 +36,7 @@ const teacherSchema = z.object({
   designation: z.string().optional().or(z.literal("")),
   joining_date: z.string().optional().or(z.literal("")),
   create_login: z.boolean(),
+  login_role: z.string().optional().or(z.literal("")),
   password: z.string().optional().or(z.literal("")),
 });
 
@@ -45,6 +47,7 @@ export function TeachersPage() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [skip, setSkip] = useState(0);
   const limit = 20;
 
@@ -80,6 +83,11 @@ export function TeachersPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["teachers"] }),
   });
 
+  const deleteMut = useMutation({
+    mutationFn: deleteTeacher,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["teachers"] }); setDeleteConfirmId(null); },
+  });
+
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<TeacherForm>({
     resolver: zodResolver(teacherSchema),
     defaultValues: { create_login: false },
@@ -88,7 +96,7 @@ export function TeachersPage() {
   const createLogin = watch("create_login");
 
   function openCreate() {
-    reset({ first_name: "", last_name: "", email: "", phone: "", date_of_birth: "", gender: "", blood_group: "", nationality: "", religion: "", department: "", designation: "", joining_date: "", create_login: false, password: "" });
+    reset({ first_name: "", last_name: "", email: "", phone: "", date_of_birth: "", gender: "", blood_group: "", nationality: "", religion: "", department: "", designation: "", joining_date: "", create_login: false, login_role: "", password: "" });
     setShowModal(true);
   }
 
@@ -161,11 +169,14 @@ export function TeachersPage() {
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${t.status === "active" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>{t.status}</span>
                   </td>
                   <td className="px-4 py-3">
-                    {t.status === "active" ? (
-                      <button onClick={() => deactivateMut.mutate(t.id)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Deactivate"><UserX size={14} /></button>
-                    ) : (
-                      <button onClick={() => activateMut.mutate(t.id)} className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Activate"><UserCheck size={14} /></button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {t.status === "active" ? (
+                        <button onClick={() => deactivateMut.mutate(t.id)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Deactivate"><UserX size={14} /></button>
+                      ) : (
+                        <button onClick={() => activateMut.mutate(t.id)} className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Activate"><UserCheck size={14} /></button>
+                      )}
+                      <button onClick={() => setDeleteConfirmId(t.id)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete"><Trash2 size={14} /></button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -320,11 +331,20 @@ export function TeachersPage() {
                 </label>
               </div>
               {createLogin && (
-                <div className="col-span-2">
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Password *</label>
-                  <input {...register("password")} type="password" className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
-                </div>
+                <>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Login Role</label>
+                    <select {...register("login_role")} className="w-full px-3 py-2 text-sm border rounded-lg">
+                      <option value="teacher">Teacher</option>
+                      <option value="head_teacher">Head Teacher</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Password *</label>
+                    <input {...register("password")} type="password" className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+                  </div>
+                </>
               )}
               <div className="col-span-2 flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Cancel</button>
@@ -334,6 +354,25 @@ export function TeachersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={20} className="text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Delete Teacher</h3>
+            <p className="text-sm text-slate-500 mb-6">Are you sure you want to delete this teacher? This action cannot be undone.</p>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => setDeleteConfirmId(null)} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">Cancel</button>
+              <button onClick={() => deleteMut.mutate(deleteConfirmId)} disabled={deleteMut.isPending} className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2">
+                {deleteMut.isPending && <Loader2 size={14} className="animate-spin" />}
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

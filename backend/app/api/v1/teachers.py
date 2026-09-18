@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, require_admin
+from app.core.deps import get_current_user, require_admin_or_head_teacher
 from app.core.security import hash_password
 from app.models.academic import TeacherClassAssignment, TeacherSubjectAssignment
 from app.models.enums import PersonStatus
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/teachers", tags=["teachers"])
 
 
 @router.post("", response_model=TeacherOut, status_code=201)
-def create_teacher(data: TeacherCreate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def create_teacher(data: TeacherCreate, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
     if db.scalar(select(Teacher).where(Teacher.email == data.email.lower().strip())):
         raise HTTPException(status_code=400, detail="Teacher email already exists")
     teacher = Teacher(
@@ -44,7 +44,8 @@ def create_teacher(data: TeacherCreate, db: Session = Depends(get_db), _: User =
     if data.create_login:
         if not data.password:
             raise HTTPException(status_code=400, detail="Password required when create_login=True")
-        login = User(email=teacher.email, hashed_password=hash_password(data.password), role=UserRole.TEACHER)
+        login_role = UserRole.HEAD_TEACHER if data.login_role == "head_teacher" else UserRole.TEACHER
+        login = User(email=teacher.email, hashed_password=hash_password(data.password), role=login_role)
         db.add(login)
         db.flush()
         teacher.user_id = login.id
@@ -71,7 +72,7 @@ def get_teacher(teacher_id: str, db: Session = Depends(get_db), _: User = Depend
 
 
 @router.patch("/{teacher_id}/deactivate", response_model=TeacherOut)
-def deactivate(teacher_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def deactivate(teacher_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
     t = db.get(Teacher, teacher_id)
     if t is None:
         raise HTTPException(status_code=404, detail="Teacher not found")
@@ -82,7 +83,7 @@ def deactivate(teacher_id: str, db: Session = Depends(get_db), _: User = Depends
 
 
 @router.patch("/{teacher_id}/activate", response_model=TeacherOut)
-def activate(teacher_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def activate(teacher_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
     t = db.get(Teacher, teacher_id)
     if t is None:
         raise HTTPException(status_code=404, detail="Teacher not found")
@@ -92,10 +93,23 @@ def activate(teacher_id: str, db: Session = Depends(get_db), _: User = Depends(r
     return t
 
 
+@router.delete("/{teacher_id}", status_code=204)
+def delete_teacher(teacher_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
+    t = db.get(Teacher, teacher_id)
+    if t is None:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    if t.user_id:
+        user = db.get(User, t.user_id)
+        if user:
+            db.delete(user)
+    db.delete(t)
+    db.commit()
+
+
 # ─── Subject assignments ────────────────────────────────────────────
 
 @router.post("/{teacher_id}/subjects/{subject_id}", status_code=201)
-def assign_subject(teacher_id: str, subject_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def assign_subject(teacher_id: str, subject_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
     if db.get(Teacher, teacher_id) is None:
         raise HTTPException(status_code=404, detail="Teacher not found")
     db.add(TeacherSubjectAssignment(teacher_id=teacher_id, subject_id=subject_id))
@@ -120,7 +134,7 @@ def list_teacher_subjects(teacher_id: str, db: Session = Depends(get_db), _: Use
 
 
 @router.delete("/{teacher_id}/subjects/{subject_id}", status_code=204)
-def remove_teacher_subject(teacher_id: str, subject_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def remove_teacher_subject(teacher_id: str, subject_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher)):
     if db.get(Teacher, teacher_id) is None:
         raise HTTPException(status_code=404, detail="Teacher not found")
     row = db.scalar(
@@ -140,7 +154,7 @@ def remove_teacher_subject(teacher_id: str, subject_id: str, db: Session = Depen
 @router.post("/{teacher_id}/classes/{class_id}", status_code=201)
 def assign_class(
     teacher_id: str, class_id: str, section_id: str | None = None,
-    db: Session = Depends(get_db), _: User = Depends(require_admin),
+    db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher),
 ):
     if db.get(Teacher, teacher_id) is None:
         raise HTTPException(status_code=404, detail="Teacher not found")
@@ -171,7 +185,7 @@ def list_teacher_classes(teacher_id: str, db: Session = Depends(get_db), _: User
 @router.delete("/{teacher_id}/classes/{class_id}", status_code=204)
 def remove_teacher_class(
     teacher_id: str, class_id: str, section_id: str | None = None,
-    db: Session = Depends(get_db), _: User = Depends(require_admin),
+    db: Session = Depends(get_db), _: User = Depends(require_admin_or_head_teacher),
 ):
     if db.get(Teacher, teacher_id) is None:
         raise HTTPException(status_code=404, detail="Teacher not found")
