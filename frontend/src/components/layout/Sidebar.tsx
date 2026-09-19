@@ -38,7 +38,7 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     label: "",
-    items: [{ to: "/", label: "Dashboard", icon: <LayoutDashboard size={20} /> }],
+    items: [{ to: "/admin", label: "Dashboard", icon: <LayoutDashboard size={20} /> }],
   },
   {
     label: "People",
@@ -106,12 +106,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       }`}
     >
       <div className="flex items-center gap-3 px-5 h-16 border-b border-slate-200 shrink-0">
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
-          <School size={20} className="text-white" />
-        </div>
+        <img src="/logo.svg" alt="Logo" className="w-9 h-9 shrink-0" />
         {!collapsed && (
           <span className="font-bold text-slate-800 text-lg whitespace-nowrap">
-            SchoolMentor
+            Greenwood International School
           </span>
         )}
       </div>
@@ -136,7 +134,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  end={item.to === "/"}
+                  end={item.to === "/admin"}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5 ${
                       isActive

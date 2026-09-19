@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { LandingPage } from "./pages/Landing";
 import { LoginPage } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { AdminLayout } from "./components/layout/AdminLayout";
@@ -42,11 +43,12 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
 
             {/* Admin / Teacher routes */}
             <Route
-              path="/"
+              path="/admin"
               element={
                 <ProtectedRoute roles={["admin", "head_teacher", "teacher"]}>
                   <AdminLayout />

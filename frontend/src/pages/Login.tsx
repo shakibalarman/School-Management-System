@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { School, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { api } from "../lib/api";
 
@@ -29,7 +29,7 @@ export function LoginPage() {
       if (me.role === "student") {
         nav("/student", { replace: true });
       } else {
-        nav("/", { replace: true });
+        nav("/admin", { replace: true });
       }
     } catch {
       setError("Invalid credentials");
@@ -38,29 +38,47 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex bg-slate-50">
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 items-center justify-center p-12">
+      {/* Left Panel - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 items-center justify-center p-12 relative">
+        <Link
+          to="/"
+          className="absolute top-6 left-6 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+        >
+          <ArrowLeft size={18} />
+          <span className="text-sm font-medium">Back to Home</span>
+        </Link>
+
         <div className="text-center text-white max-w-md">
-          <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-8">
-            <School size={40} className="text-white" />
-          </div>
-          <h1 className="text-4xl font-bold mb-4">SchoolMentor</h1>
+          <img src="/logo.svg" alt="Logo" className="w-24 h-24 mx-auto mb-8" />
+          <h1 className="text-4xl font-bold mb-4">Greenwood International School</h1>
           <p className="text-lg text-white/80">
             A comprehensive school management system for administrators, teachers, and students.
           </p>
         </div>
       </div>
 
+      {/* Right Panel - Login Form */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
+          {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <School size={22} className="text-white" />
-            </div>
-            <span className="font-bold text-xl text-slate-800">SchoolMentor</span>
+            <img src="/logo.svg" alt="Logo" className="w-12 h-12" />
+            <span className="font-bold text-xl text-slate-800">Greenwood International School</span>
+          </div>
+
+          {/* Mobile Back Link */}
+          <div className="lg:hidden mb-6">
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors"
+            >
+              <ArrowLeft size={16} />
+              Back to Home
+            </Link>
           </div>
 
           <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome back</h2>
-          <p className="text-sm text-slate-500 mb-8">Sign in to your admin dashboard</p>
+          <p className="text-sm text-slate-500 mb-8">Sign in to your dashboard</p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>

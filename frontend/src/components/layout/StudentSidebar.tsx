@@ -45,11 +45,9 @@ export function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
       }`}
     >
       <div className="flex items-center gap-3 px-5 h-16 border-b border-slate-200 shrink-0">
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
-          <School size={20} className="text-white" />
-        </div>
+        <img src="/logo.svg" alt="Logo" className="w-9 h-9 shrink-0" />
         {!collapsed && (
-          <span className="font-bold text-slate-800 text-lg whitespace-nowrap">SchoolMentor</span>
+          <span className="font-bold text-slate-800 text-lg whitespace-nowrap">Greenwood International School</span>
         )}
       </div>
 
